@@ -1,0 +1,23 @@
+{
+  "name": "jquery-qcron",
+  "version": "0.0.0",
+  "description": "jquery plugin for creating cron expression for both standard and quartz schedulers",
+  "main": "jquery-qcron.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jpgilchrist/jquery-qcron.git"
+  },
+  "keywords": [
+    "jquery",
+    "cron",
+    "quartz"
+  ],
+  "author": "James P. Gilchrist",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jpgilchrist/jquery-qcron/issues"
+  }
+}

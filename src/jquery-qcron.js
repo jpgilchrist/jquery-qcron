@@ -453,14 +453,14 @@
                 
                 switch(format) {
                     case 'specific-day':
-                        var month = this.__months[$tab.find("div.specific-day select.month-select").val()].value,
+                        var spMonth = this.__months[$tab.find("div.specific-day select.month-select").val()].value,
                             dom = $tab.find("div.specific-day select.day-of-month-select").val();
-                        return this.__expression("0", startsAtMins, startsAtHours, dom, month, "?", "*");
+                        return this.__expression("0", startsAtMins, startsAtHours, dom, spMonth, "?", "*");
                     case 'relative-day':
                         var week = this.__weeks[$tab.find("div.relative-day select.week-select").val()].value,
                             dow = this.__weekdays[$tab.find("div.relative-day select.day-select").val()].value,
-                            month = this.__months[$tab.find("div.relative-day select.month-select").val()].value;
-                        return this.__expression("0", startsAtMins, startsAtHours, "?", month, dow+"#"+week, "*");
+                            relMonth = this.__months[$tab.find("div.relative-day select.month-select").val()].value;
+                        return this.__expression("0", startsAtMins, startsAtHours, "?", relMonth, dow+"#"+week, "*");
                 }
             },
             

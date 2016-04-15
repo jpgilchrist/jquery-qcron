@@ -90,3 +90,7 @@
 .qcron-controls.qcron-year-selected .qcron-minute-suffix {
     display: inline-block;
 }
+
+.qcron-controls select {
+    margin: 0 4px;
+}

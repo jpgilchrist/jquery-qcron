@@ -197,116 +197,7 @@
             },
             
             _renderInputs: function () {
-                var self = this;
                 
-                this.$periodPrefix = $("<span>Every </span>").appendTo(this.$qcronControls);
-                this.$period = $("<select class='qcron-period-select'></select>").appendTo(this.$qcronControls);
-                this.$periodSuffix = $("<span></span>").appendTo(this.$qcronControls);
-                
-                $.each(this.__periods, function (key, period) {
-                    if (!!self.options[period.display])
-                        self.$period.append("<option value='" + key + "'>" + period.display + "</option>");
-                });
-                
-                this.$dayOfWeek = $("<select class='qcron-dow-select' multiple></select>").appendTo(this.$qcronControls);
-                this.$dayOfWeekSuffix = $("<span class='qcron-dow-suffix'></span>").appendTo(this.$qcronControls);
-                
-                $.each(this.__weekdays, function (key, weekday) {
-                   self.$dayOfWeek.append("<option value='" + key + "'>" + weekday.display + "</option>"); 
-                });
-                
-                this.$month = $("<select class='qcron-month-select'></select>").appendTo(this.$qcronControls);
-                this.$monthSuffix = $("<span class='qcron-month-suffix'></span>").appendTo(this.$qcronControls);
-                
-                $.each(this.__months, function (key, month) {
-                    self.$month.append("<option value='" + key + "'>" + month.display + "</option>"); 
-                });
-                
-                this.$dayOfMonth = $("<select class='qcron-dom-select'></select>").appendTo(this.$qcronControls);
-                this.$dayOfMonthSuffix = $("<span class='qcron-dom-suffix'></span>").appendTo(this.$qcronControls);
-                
-                this.$month.on('change', function () {
-                    var dom = parseInt(self.$dayOfMonth.val()) || 1,
-                        month = self.__months[$(this).val()];
-                    
-                    self.$dayOfMonth.empty();
-                    for (var i = 1; i <= month.days; i++) {
-                        self.$dayOfMonth.append("<option value='" + i + "'>" + i + "</option>");
-                    }
-                    self.$dayOfMonth.val(dom <= month.days ? dom : month.days); 
-                });
-                this.$month.trigger('change');
-                
-                this.$hour = $("<select class='qcron-hour-select'></select>").appendTo(this.$qcronControls);
-                this.$hourSuffix = $("<span class='qcron-hour-suffix'></span>").appendTo(this.$qcronControls);
-                
-                this.$minute = $("<select class='qcron-minute-select'></select>").appendTo(this.$qcronControls);
-                this.$minuteSuffix = $("<span class='qcron-minute-suffix'></span>").appendTo(this.$qcronControls);
-                
-                var i;
-                for (i = 0; i < 24; i++) {
-                    this.$hour.append("<option value='" + i + "'>" + this.__twodigitformat(i) + "</option>");
-                }
-                
-                for (i = 0; i < 59; i++) {
-                    this.$minute.append("<option value='" + i + "'>" + this.__twodigitformat(i) + "</option>");
-                }
-                
-                this.$period.on('change', function () {
-                    var period = self.__periods[$(this).val()];
-                    self.$qcronControls.attr('class', 'qcron-controls qcron-'+period.display+'-selected');
-                    
-                    switch(period.display) {
-                        case "minute":
-                            self.$periodSuffix.text("");
-                            self.$dayOfWeekSuffix.text("");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text("");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text("");
-                            break;
-                        case "hour":
-                            self.$periodSuffix.text(" at ");
-                            self.$dayOfWeekSuffix.text("");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text("");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text(" minutes past the hour.");
-                            break;
-                        case "day":
-                            self.$periodSuffix.text(" at ");
-                            self.$dayOfWeekSuffix.text("");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text("");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text("");
-                            break;
-                        case "week":
-                            self.$periodSuffix.text(" on ");
-                            self.$dayOfWeekSuffix.text(" at ");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text("");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text("");
-                            break;
-                        case "month":
-                            self.$periodSuffix.text(" on the ");
-                            self.$dayOfWeekSuffix.text("");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text(" at ");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text("");
-                            break;
-                        case "year":
-                            self.$periodSuffix.text(" on ");
-                            self.$dayOfWeekSuffix.text("");
-                            self.$monthSuffix.text("");
-                            self.$dayOfMonthSuffix.text(" at ");
-                            self.$hourSuffix.text(":");
-                            self.$minuteSuffix.text("");
-                            break;
-                    }
-                }).trigger('change');   
             },
             
             _renderPreview: function () {
@@ -317,28 +208,22 @@
             _buildCronExpression: function () {
                 switch (this.__periods[this.$period.val()].display) {
                     case "minute":
-                        this.expression = this.__expression("0", "*", "*", "*", "*", "?", "*");
+                        
                         break;
                     case "hour":
-                        this.expression = this.__expression("0", this.$minute.val(), "*", "*", "*", "?", "*");
+                        
                         break;
                     case "day":
-                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), "*", "*", "?", "*");
+                        
                         break;
                     case "week":
-                        var selected = this.$dayOfWeek.val() || [];
-                        var weekdays = [];
-                        for (var i = 0; i < selected.length; i++) {
-                            weekdays.push(this.__weekdays[selected[i]].value);
-                        }
-                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), "?", "*", weekdays.join(",") || "*", "*");
+                        
                         break;
                     case "month":
-                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), this.$dayOfMonth.val(), "*", "?", "*");
+                        
                         break;
                     case "year":
-                        var month = this.__months[this.$month.val()].value;
-                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), this.$dayOfMonth.val(), month, "?", "*");
+                        
                         break;
                 }
                 this._trigger(':expression');

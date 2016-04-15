@@ -94,3 +94,7 @@
 .qcron-controls select {
     margin: 0 4px;
 }
+
+.qcron-controls div {
+    margin: 10px 0;
+}

@@ -17,12 +17,40 @@
         $.widget("jpgilchrist.qcron", {
             options: {
                 initial: "0 0/4 * 1/1 * ? *",
-                minutes: true,
-                hourly: true,
-                daily: true,
-                weekly: true,
-                monthly: true,
-                yearly: true
+                minute: true,
+                hour: true,
+                day: true,
+                week: true,
+                month: true,
+                year: true,
+                preview: true
+            },
+            
+            __periods: {
+                1: {
+                    display: "minute",
+                    value: 1
+                },
+                2: {
+                    display: "hour",
+                    value: 2
+                },
+                3: {
+                    display: "day",
+                    value: 3
+                },
+                4: {
+                    display: "week",
+                    value: 4
+                },
+                5: {
+                    display: "month",
+                    value: 5
+                }, 
+                6: {
+                    display: "year",
+                    value: 6
+                }
             },
             
             __weekdays: {
@@ -136,7 +164,7 @@
                 }
             },
             
-            __tabsTemplate: "<div id='qcron-periods'><ul></ul></div>",
+            __controlsTemplate: "<div class='qcron-controls'></div>",
             __previewTemplate: "<div class='qcron-preview'></div>",
             
             _create: function (options) {
@@ -146,9 +174,9 @@
                     "qcron:expression": function () {
                         this._renderPreview();
                     },
-                    "change input, select": function () {
-                        this._buildCronExpression();
-                    }
+//                    "change input, select": function () {
+//                        this._buildCronExpression();
+//                    }
                 });
             },
             
@@ -156,36 +184,129 @@
                 this.$element = $(this.element);
                 this.$element.empty();
                 
-                this.$qcronControls = $(this.__tabsTemplate);
-                this.$qcronPreview = $(this.__previewTemplate);
+                this.$qcronControls = $(this.__controlsTemplate);
+                this.$element.append(this.$qcronControls);
                 
-                this.$element.append(this.$qcronControls).append(this.$qcronPreview);
+                if (this.options.preview) {
+                    this.$qcronPreview = $(this.__previewTemplate);
+                    this.$element.append(this.$qcronPreview);
+                }
                 
                 this._renderInputs();
-                this._buildCronExpression('qcron-minutes-tab');
             },
             
             _renderInputs: function () {
-                
-                if (this.options.minutes)
-                    this._renderMinutesTab();
-                if (this.options.hourly)
-                    this._renderHourlyTab();
-                if (this.options.daily)
-                    this._renderDailyTab();
-                if (this.options.weekly)
-                    this._renderWeeklyTab();
-                if (this.options.monthly)
-                    this._renderMonthlyTab();
-                if (this.options.yearly)
-                    this._renderYearlyTab();
-                
                 var self = this;
-                this.$qcronControls.tabs({
-                    activate: function () {
-                        self._buildCronExpression();
-                    }
+                
+                this.$periodPrefix = $("<span>Every </span>").appendTo(this.$qcronControls);
+                this.$period = $("<select class='qcron-period-select'></select>").appendTo(this.$qcronControls);
+                this.$periodSuffix = $("<span></span>").appendTo(this.$qcronControls);
+                
+                $.each(this.__periods, function (key, period) {
+                    if (!!self.options[period.display])
+                        self.$period.append("<option value='" + key + "'>" + period.display + "</option>");
                 });
+                
+                this.$dayOfWeek = $("<select class='qcron-dow-select'></select>").appendTo(this.$qcronControls);
+                this.$dayOfWeekSuffix = $("<span class='qcron-dow-suffix'></span>").appendTo(this.$qcronControls);
+                
+                $.each(this.__weekdays, function (key, weekday) {
+                   self.$dayOfWeek.append("<option value='" + key + "'>" + weekday.display + "</option>"); 
+                });
+                
+                this.$month = $("<select class='qcron-month-select'></select>").appendTo(this.$qcronControls);
+                this.$monthSuffix = $("<span class='qcron-month-suffix'></span>").appendTo(this.$qcronControls);
+                
+                $.each(this.__months, function (key, month) {
+                    self.$month.append("<option value='" + key + "'>" + month.display + "</option>"); 
+                });
+                
+                this.$dayOfMonth = $("<select class='qcron-dom-select'></select>").appendTo(this.$qcronControls);
+                this.$dayOfMonthSuffix = $("<span class='qcron-dom-suffix'></span>").appendTo(this.$qcronControls);
+                
+                this.$month.on('change', function () {
+                    var dom = parseInt(self.$dayOfMonth.val()) || 1,
+                        month = self.__months[$(this).val()];
+                    
+                    self.$dayOfMonth.empty();
+                    for (var i = 1; i <= month.days; i++) {
+                        self.$dayOfMonth.append("<option value='" + i + "'>" + i + "</option>");
+                    }
+                    self.$dayOfMonth.val(dom <= month.days ? dom : month.days); 
+                });
+                this.$month.trigger('change');
+                
+                this.$hour = $("<select class='qcron-hour-select'></select>").appendTo(this.$qcronControls);
+                this.$hourSuffix = $("<span class='qcron-hour-suffix'></span>").appendTo(this.$qcronControls);
+                
+                for (var i = 0; i < 24; i++) {
+                    this.$hour.append("<option value='" + i + "'>" + this.__twodigitformat(i) + "</option>");
+                }
+                
+                this.$minute = $("<select class='qcron-minute-select'></select>").appendTo(this.$qcronControls);
+                this.$minuteSuffix = $("<span class='qcron-minute-suffix'></span>").appendTo(this.$qcronControls);
+                
+                for (var i = 0; i < 59; i++) {
+                    this.$minute.append("<option value='" + i + "'>" + this.__twodigitformat(i) + "</option>");
+                }
+                
+                this.$period.on('change', function () {
+                    var period = self.__periods[$(this).val()];
+                    self.$qcronControls.addClass('qcron-'+period.display+'-selected');
+                    
+                    switch(period.display) {
+                        case "minute":
+                            self.$periodSuffix.text("");
+                            self.$dayOfWeekSuffix.text("");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text("");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text("");
+                            break;
+                        case "hour":
+                            self.$periodSuffix.text(" at ");
+                            self.$dayOfWeekSuffix.text("");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text("");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text(" minutes past the hour.");
+                            break;
+                        case "day":
+                            self.$periodSuffix.text(" at ");
+                            self.$dayOfWeekSuffix.text("");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text("");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text("");
+                            break;
+                        case "week":
+                            self.$periodSuffix.text(" on ");
+                            self.$dayOfWeekSuffix.text(" at ");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text("");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text("");
+                            break;
+                        case "month":
+                            self.$periodSuffix.text(" on the ");
+                            self.$dayOfWeekSuffix.text("");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text(" at ");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text("");
+                            break;
+                        case "year":
+                            self.$periodSuffix.text(" on ");
+                            self.$dayOfWeekSuffix.text("");
+                            self.$monthSuffix.text("");
+                            self.$dayOfMonthSuffix.text(" at ");
+                            self.$hourSuffix.text(":");
+                            self.$minuteSuffix.text("");
+                            break;
+                    }
+                }).trigger('change');
+
+                
             },
             
             __minutesTabItemTemplate: "<li><a href='#qcron-minutes-tab'>Minutes</a></li>",
@@ -341,7 +462,10 @@
             
             _renderPreview: function () {
                 var expression = !!this.expression ? this.expression : this.options.initial;
-                this.$qcronPreview.html("<span>" + expression + "</span>");
+                if (!!expression.error)
+                    this.$qcronPreview.html("<span style='background-color: rgba(255,0,0,0.4);'>" + expression.value + "</span>");
+                else
+                    this.$qcronPreview.html("<span>" + expression.value + "</span>");
             },
             
             _buildCronExpression: function () {
@@ -371,9 +495,15 @@
             
             _buildMinutesCronExpression: function () {
                 var minutes = this.$element.find("#qcron-minutes-tab input").val();
+                if (!!minutes && (minutes < 0 || minutes > 59)) {
+                    return {
+                        error: true,
+                        value: "Minutes must be within a range of 0 - 59."
+                    };
+                }
+                    
                 minutes = !minutes ? "*" : "0/" + minutes;
-                return this.__expression("0", minutes, "*", "*", "*", "?");
-                
+                return {value: this.__expression("0", minutes, "*", "*", "*", "?")};
             },
             
             _buildHourlyCronExpression: function () {
@@ -382,9 +512,17 @@
                 var everyHours = $tab.find("input[type='number']").val(),
                     startsAtHours = $tab.find("select.hour-select").val(),
                     startsAtMins  = $tab.find("select.minute-select").val();
+                
+                if (!!everyHours && (everyHours < 1 || everyHours > 23)) {
+                    return {
+                        error: true,
+                        value: "Hours must be within a range of 1 - 23"
+                    };
+                }
+                
                 if (!!everyHours)
-                    return this.__expression("0", startsAtMins, startsAtHours + "/" + everyHours, "*", "*", "?");
-                return this.__expression("0", startsAtMins, startsAtHours + "/1", "*", "*", "?");
+                    return {value: this.__expression("0", startsAtMins, startsAtHours + "/" + everyHours, "*", "*", "?")};
+                return {value: this.__expression("0", startsAtMins, startsAtHours + "/1", "*", "*", "?")};
             },
             
             _buildDailyCronExpression: function () {
@@ -399,9 +537,10 @@
                     case 'every-day':
                         var everyDays = $tab.find("input[type='number']").val(),
                             dow = !everyDays ? "1/1" : "1/" + everyDays;
-                        return this.__expression("0", startsAtMins, startsAtHours, dow, "*", "?");
+                                                
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, dow, "*", "?")};
                     case 'every-weekday':
-                        return this.__expression("0", startsAtMins, startsAtHours, "?", "*", "MON-FRI");
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, "?", "*", "MON-FRI")};
                 }
             },
             
@@ -419,7 +558,7 @@
                 var startsAtHours = $tab.find("select.hour-select").val(),
                     startsAtMins  = $tab.find("select.minute-select").val();
                 
-                return this.__expression("0", startsAtMins, startsAtHours, "?", "*", selectedDays.join(","));
+                return {value: this.__expression("0", startsAtMins, startsAtHours, "?", "*", selectedDays.join(","))};
                 
             },
             
@@ -435,12 +574,12 @@
                     case 'by-day':
                         var nthDay = $tab.find("div.by-day input.nth-day").val();
                         everyNMonths = $tab.find("div.by-day input.nth-month").val();
-                        return this.__expression("0", startsAtMins, startsAtHours, nthDay, "1/"+everyNMonths, "?");
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, nthDay, "1/"+everyNMonths, "?")};
                     case 'by-week':
                         var nthWeek = $tab.find("div.by-week select.week-select").val(),
                             day = this.__weekdays[$tab.find("div.by-week select.day-select").val()].value;
                         everyNMonths = $tab.find("div.by-week input.nth-month").val();
-                        return this.__expression("0", startsAtMins, startsAtHours, "?", "1/"+everyNMonths, day+"#"+nthWeek);
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, "?", "1/"+everyNMonths, day+"#"+nthWeek)};
                 }
             },
             
@@ -455,12 +594,12 @@
                     case 'specific-day':
                         var spMonth = this.__months[$tab.find("div.specific-day select.month-select").val()].value,
                             dom = $tab.find("div.specific-day select.day-of-month-select").val();
-                        return this.__expression("0", startsAtMins, startsAtHours, dom, spMonth, "?", "*");
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, dom, spMonth, "?", "*")};
                     case 'relative-day':
                         var week = this.__weeks[$tab.find("div.relative-day select.week-select").val()].value,
                             dow = this.__weekdays[$tab.find("div.relative-day select.day-select").val()].value,
                             relMonth = this.__months[$tab.find("div.relative-day select.month-select").val()].value;
-                        return this.__expression("0", startsAtMins, startsAtHours, "?", relMonth, dow+"#"+week, "*");
+                        return {value: this.__expression("0", startsAtMins, startsAtHours, "?", relMonth, dow+"#"+week, "*")};
                 }
             },
             
@@ -482,7 +621,7 @@
                 month = (""+month).trim();
                 dow = (""+dow).trim();
                 year = !!year ? (""+year).trim() : year;
-                
+                                
                 if (!!year)
                     return (seconds + " " + minutes + " " + hours + " " + dom + " " + month + " " + dow + " " + year).trim();
                 return (seconds + " " + minutes + " " + hours + " " + dom + " " + month + " " + dow).trim();

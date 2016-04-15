@@ -1,0 +1,92 @@
+.qcron-controls.qcron-minute-selected .qcron-dow-select,
+.qcron-controls.qcron-minute-selected .qcron-dow-suffix,
+.qcron-controls.qcron-minute-selected .qcron-month-select,
+.qcron-controls.qcron-minute-selected .qcron-month-suffix,
+.qcron-controls.qcron-minute-selected .qcron-dom-select,
+.qcron-controls.qcron-minute-selected .qcron-dom-suffix,
+.qcron-controls.qcron-minute-selected .qcron-hour-select,
+.qcron-controls.qcron-minute-selected .qcron-hour-suffix,
+.qcron-controls.qcron-minute-selected .qcron-minute-select,
+.qcron-controls.qcron-minute-selected .qcron-minute-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-hour-selected .qcron-dow-select,
+.qcron-controls.qcron-hour-selected .qcron-dow-suffix,
+.qcron-controls.qcron-hour-selected .qcron-month-select,
+.qcron-controls.qcron-hour-selected .qcron-month-suffix,
+.qcron-controls.qcron-hour-selected .qcron-dom-select,
+.qcron-controls.qcron-hour-selected .qcron-dom-suffix,
+.qcron-controls.qcron-hour-selected .qcron-hour-select,
+.qcron-controls.qcron-hour-selected .qcron-hour-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-hour-selected .qcron-minute-select,
+.qcron-controls.qcron-hour-selected .qcron-minute-suffix {
+    display: inline-block;
+}
+
+.qcron-controls.qcron-day-selected .qcron-dow-select,
+.qcron-controls.qcron-day-selected .qcron-dow-suffix,
+.qcron-controls.qcron-day-selected .qcron-month-select,
+.qcron-controls.qcron-day-selected .qcron-month-suffix,
+.qcron-controls.qcron-day-selected .qcron-dom-select,
+.qcron-controls.qcron-day-selected .qcron-dom-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-day-selected .qcron-hour-select,
+.qcron-controls.qcron-day-selected .qcron-hour-suffix,
+.qcron-controls.qcron-day-selected .qcron-minute-select,
+.qcron-controls.qcron-day-selected .qcron-minute-suffix {
+    display: inline-block;
+}
+
+.qcron-controls.qcron-week-selected .qcron-month-select,
+.qcron-controls.qcron-week-selected .qcron-month-suffix,
+.qcron-controls.qcron-week-selected .qcron-dom-select,
+.qcron-controls.qcron-week-selected .qcron-dom-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-week-selected .qcron-dow-select,
+.qcron-controls.qcron-week-selected .qcron-dow-suffix,
+.qcron-controls.qcron-week-selected .qcron-hour-select,
+.qcron-controls.qcron-week-selected .qcron-hour-suffix,
+.qcron-controls.qcron-week-selected .qcron-minute-select,
+.qcron-controls.qcron-week-selected .qcron-minute-suffix {
+    display: inline-block;
+}
+
+.qcron-controls.qcron-month-selected .qcron-month-select,
+.qcron-controls.qcron-month-selected .qcron-month-suffix,
+.qcron-controls.qcron-month-selected .qcron-dow-select,
+.qcron-controls.qcron-month-selected .qcron-dow-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-month-selected .qcron-dom-select,
+.qcron-controls.qcron-month-selected .qcron-dom-suffix,
+.qcron-controls.qcron-month-selected .qcron-hour-select,
+.qcron-controls.qcron-month-selected .qcron-hour-suffix,
+.qcron-controls.qcron-month-selected .qcron-minute-select,
+.qcron-controls.qcron-month-selected .qcron-minute-suffix {
+    display: inline-block;
+}
+
+.qcron-controls.qcron-year-selected .qcron-dow-select,
+.qcron-controls.qcron-year-selected .qcron-dow-suffix {
+    display: none;
+}
+
+.qcron-controls.qcron-year-selected .qcron-month-select,
+.qcron-controls.qcron-year-selected .qcron-month-suffix,
+.qcron-controls.qcron-year-selected .qcron-dom-select,
+.qcron-controls.qcron-year-selected .qcron-dom-suffix,
+.qcron-controls.qcron-year-selected .qcron-hour-select,
+.qcron-controls.qcron-year-selected .qcron-hour-suffix,
+.qcron-controls.qcron-year-selected .qcron-minute-select,
+.qcron-controls.qcron-year-selected .qcron-minute-suffix {
+    display: inline-block;
+}

@@ -208,7 +208,7 @@
                         self.$period.append("<option value='" + key + "'>" + period.display + "</option>");
                 });
                 
-                this.$dayOfWeek = $("<select class='qcron-dow-select'></select>").appendTo(this.$qcronControls);
+                this.$dayOfWeek = $("<select class='qcron-dow-select' multiple></select>").appendTo(this.$qcronControls);
                 this.$dayOfWeekSuffix = $("<span class='qcron-dow-suffix'></span>").appendTo(this.$qcronControls);
                 
                 $.each(this.__weekdays, function (key, weekday) {
@@ -326,8 +326,12 @@
                         this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), "*", "*", "?", "*");
                         break;
                     case "week":
-                        var dow = this.__weekdays[this.$dayOfWeek.val()].value;
-                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), "?", "*", dow, "*");
+                        var selected = this.$dayOfWeek.val() || [];
+                        var weekdays = [];
+                        for (var i = 0; i < selected.length; i++) {
+                            weekdays.push(this.__weekdays[selected[i]].value);
+                        }
+                        this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), "?", "*", weekdays.join(",") || "*", "*");
                         break;
                     case "month":
                         this.expression = this.__expression("0", this.$minute.val(), this.$hour.val(), this.$dayOfMonth.val(), "*", "?", "*");

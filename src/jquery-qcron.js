@@ -14,6 +14,147 @@
 /* jshint curly:false */
 (function ($) {
     function setup () {
+        
+        var __weekdays = {
+            1: {
+                display: "Sunday",
+                value: "SUN"
+            }, 
+            2: {
+                display: "Monday",
+                value: "MON"
+            }, 
+            3 : {
+                display: "Tuesday",
+                value: "TUE"
+            }, 
+            4: {
+                display: "Wednesday",
+                value: "WED"
+            }, 
+            5: {
+                display: "Thursday",
+                value: "THU"
+            }, 
+            6: {
+                display: "Friday",
+                value: "FRI"
+            }, 
+            7: {
+                display: "Saturday",
+                value: "SAT"
+            }
+        };
+        
+        var __weeks = {
+            1: {
+                display: "First",
+                value: 1
+            },
+            2: {
+                display: "Second",
+                value: 2
+            },
+            3: {
+                display: "Third",
+                value: 3
+            },
+            4: {
+                display: "Fourth",
+                value: 4
+            }
+        };
+        
+        var __periods = {
+            1: {
+                display: "minute",
+                value: 1
+            },
+            2: {
+                display: "hour",
+                value: 2
+            },
+            3: {
+                display: "day",
+                value: 3
+            },
+            4: {
+                display: "week",
+                value: 4
+            },
+            5: {
+                display: "month",
+                value: 5
+            },
+            6: {
+                display: "year",
+                value: 6
+            }
+        };
+        
+        var __months = {
+            1: {
+                display: "January",
+                value: "JAN",
+                days: 31
+            },
+            2: {
+                display: "February",
+                value: "FEB",
+                days: 29
+            },
+            3: {
+                display: "March",
+                value: "MAR",
+                days: 31
+            },
+            4: {
+                display: "April",
+                value: "APR",
+                days: 30
+            },
+            5: {
+                display: "May",
+                value: "MAY",
+                days: 31
+            },
+            6: {
+                display: "June",
+                value: "JUN",
+                days: 30
+            },
+            7: {
+                display: "July",
+                value: "JUL",
+                days: 31
+            },
+            8: {
+                display: "August",
+                value: "AUG",
+                days: 31
+            },
+            9: {
+                display: "September",
+                value: "SEP",
+                days: 30
+            },
+            10: {
+                display: "October",
+                value: "OCT",
+                days: 31
+            },
+            11: {
+                display: "November",
+                value: "NOV",
+                days: 30
+            },
+            12: {
+                display: "December",
+                value: "DEC",
+                days: 31
+            }
+        };
+        
         $.widget("jpgilchrist.qcron", {
             options: {
                 initial: "0 0/4 * 1/1 * ? *",
@@ -25,144 +166,6 @@
                 year: true,
                 preview: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron"
-            },
-            
-            __periods: {
-                1: {
-                    display: "minute",
-                    value: 1
-                },
-                2: {
-                    display: "hour",
-                    value: 2
-                },
-                3: {
-                    display: "day",
-                    value: 3
-                },
-                4: {
-                    display: "week",
-                    value: 4
-                },
-                5: {
-                    display: "month",
-                    value: 5
-                }, 
-                6: {
-                    display: "year",
-                    value: 6
-                }
-            },
-            
-            __weekdays: {
-                1: {
-                    display: "Sunday",
-                    value: "SUN"
-                }, 
-                2: {
-                    display: "Monday",
-                    value: "MON"
-                }, 
-                3 : {
-                    display: "Tuesday",
-                    value: "TUE"
-                }, 
-                4: {
-                    display: "Wednesday",
-                    value: "WED"
-                }, 
-                5: {
-                    display: "Thursday",
-                    value: "THU"
-                }, 
-                6: {
-                    display: "Friday",
-                    value: "FRI"
-                }, 
-                7: {
-                    display: "Saturday",
-                    value: "SAT"
-                }
-            },
-            __weeks: {
-                1: {
-                    display: "First",
-                    value: 1
-                },
-                2: {
-                    display: "Second",
-                    value: 2
-                },
-                3: {
-                    display: "Third",
-                    value: 3
-                },
-                4: {
-                    display: "Fourth",
-                    value: 4
-                }
-            },
-            __months: {
-                1: {
-                    display: "January",
-                    value: "JAN",
-                    days: 31
-                },
-                2: {
-                    display: "February",
-                    value: "FEB",
-                    days: 29
-                },
-                3: {
-                    display: "March",
-                    value: "MAR",
-                    days: 31
-                },
-                4: {
-                    display: "April",
-                    value: "APR",
-                    days: 30
-                },
-                5: {
-                    display: "May",
-                    value: "MAY",
-                    days: 31
-                },
-                6: {
-                    display: "June",
-                    value: "JUN",
-                    days: 30
-                },
-                7: {
-                    display: "July",
-                    value: "JUL",
-                    days: 31
-                },
-                8: {
-                    display: "August",
-                    value: "AUG",
-                    days: 31
-                },
-                9: {
-                    display: "September",
-                    value: "SEP",
-                    days: 30
-                },
-                10: {
-                    display: "October",
-                    value: "OCT",
-                    days: 31
-                },
-                11: {
-                    display: "November",
-                    value: "NOV",
-                    days: 30
-                },
-                12: {
-                    display: "December",
-                    value: "DEC",
-                    days: 31
-                }
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -225,29 +228,36 @@
                 if (this.options.year)
                     this._renderYearlyTab();
 
+                function buildTab ($tab) {
+                    switch($tab.attr('id')) {
+                        case 'qcron-minutes-tab':
+                            $tab.qcronMinutesTab('build');
+                            break;
+                        case 'qcron-hourly-tab':
+                            $tab.qcronHourlyTab('build');
+                            break;
+                        case 'qcron-daily-tab':
+                            $tab.qcronDailyTab('build');
+                            break;
+                        case 'qcron-weekly-tab':
+                            $tab.qcronWeeklyTab('build');
+                            break;
+                        case 'qcron-monthly-tab':
+                            $tab.qcronMonthlyTab('build');
+                            break;
+                        case 'qcron-yearly-tab':
+                            $tab.qcronYearlyTab('build');
+                            break;
+                    }
+                }
+                
                 this.$qcronControls.tabs({
-                    activate: function (event, ui) {
-                        var $tab = ui.newPanel;
-                        switch($tab.attr('id')) {
-                            case 'qcron-minutes-tab':
-                                $tab.qcronMinutesTab('build');
-                                break;
-                            case 'qcron-hourly-tab':
-                                $tab.qcronHourlyTab('build');
-                                break;
-                            case 'qcron-daily-tab':
-                                $tab.qcronDailyTab('build');
-                                break;
-                            case 'qcron-weekly-tab':
-                                $tab.qcronWeeklyTab('build');
-                                break;
-                            case 'qcron-monthly-tab':
-                                $tab.qcronMonthlyTab('build');
-                                break;
-                            case 'qcron-yearly-tab':
-                                $tab.qcronYearlyTab('build');
-                                break;
-                        }
+                    active: 4,
+                    create: function (event, ui) {
+                      buildTab(ui.panel);
+                    },
+                    beforeActivate: function (event, ui) {
+                        buildTab(ui.newPanel);
                     }
                 });
             },
@@ -365,6 +375,7 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + i + "</option>");
                 }
                 
+                this.$element.empty();
                 this.$element.append("<span>Every</span>");
                 this.$element.append(this.$minuteSelect);
                 this.$element.append("<span>minute(s) starting at</span>");
@@ -414,6 +425,7 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                this.$element.empty();
                 this.$element.append("<span>Every</span>");
                 this.$element.append(this.$hourSelect);
                 this.$element.append("<span>hour(s) starting at</span>");
@@ -467,9 +479,10 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                this.$element.empty();
                 this.$element.append("<span>Every</span>");
                 this.$element.append(this.$daySelect);
-                this.$element.append("<span>day(s) starting at</span>");
+                this.$element.append("<span>day(s) at</span>");
                 this.$element.append(this.$hourStartSelect);
                 this.$element.append("<span>:</span>");
                 this.$element.append(this.$minuteStartSelect);
@@ -495,7 +508,7 @@
             },
             _create: function (options) {
                 $.extend(this.options, options);  
-                
+
                 this.$element = $(this.element);
 
                 if (!!this.options.expression)
@@ -506,13 +519,41 @@
                 });
             },
             _init: function () {
-                $(this.element).html("<span>Hello Weeks!</span>");
+                this.$dayOfWeekCheckboxes = $("<div class='qcron-dow-checkboxes'></div>");
+                
+                var self = this;
+                $.each(__weekdays, function (key, weekday) {
+                    self.$dayOfWeekCheckboxes.append("<label><input type='checkbox' class='qcron-dow-input' value='" + key + "'/>" + weekday.display + "</label>");
+                });
+                
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+
+                for (var i = 0; i < 60; i++) {
+                    if (i < 24)
+                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                }
+
+                this.$element.empty();
+                this.$element.append(this.$dayOfWeekCheckboxes);
+                this.$element.append("<span>at</span>");
+                this.$element.append(this.$hourStartSelect);
+                this.$element.append("<span>:</span>");
+                this.$element.append(this.$minuteStartSelect);
             },
             build: function (event, value) {
                 if (!!value)
                     this.expression = value;
-                else
-                    this.expression = "0 " + this.$minuteStartSelect.val() + "/" + this.$minuteSelect.val() + " * * * ? *";
+                else {
+                    var selectedDaysOfWeek = [];
+                    this.$dayOfWeekCheckboxes.find("input.qcron-dow-input:checked").each(function(key, dow) {
+                        selectedDaysOfWeek.push(__weekdays[$(dow).val()].value);
+                    });
+                    
+                    this.expression = "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + " ? * " + selectedDaysOfWeek.join(",") + " *";
+                }
+                    
 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
@@ -538,13 +579,83 @@
                 });
             },
             _init: function () {
-                $(this.element).html("<span>Hello Months!</span>");
+                var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
+                $monthlyOptionOne.append("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>");
+                $monthlyOptionOne.append("<span>On day</san>").appendTo($monthlyOptionOne);
+                $monthlyOptionOne.append("<select class='qcron-dom-select'></select>");
+                $monthlyOptionOne.append("<span>every</span>");
+                $monthlyOptionOne.append("<select class='qcron-month-increment'></select>");
+                $monthlyOptionOne.append("<span>month(s)");
+                
+                var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>");
+                $monthlyOptionTwo.append("<input type='radio' name='qcron-monthly-option' value='option-two'/>");
+                $monthlyOptionTwo.append("<span>The</span>");
+                $monthlyOptionTwo.append("<select class='qcron-week-select'></select>");
+                $monthlyOptionTwo.append("<select class='qcron-dow-select'></select>");
+                $monthlyOptionTwo.append("<span>of every</span>");
+                $monthlyOptionTwo.append("<select class='qcron-month-increment'></select>");
+                $monthlyOptionTwo.append("<span>month(s)</span>");
+                
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+
+                for (var i = 0; i < 60; i++) {
+                    if (i > 0 && i < 32)
+                        $(".qcron-dom-select", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
+                    
+                    if (i > 0 && i < 12) {
+                        $(".qcron-month-increment", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
+                        $(".qcron-month-increment", $monthlyOptionTwo).append("<option value='" + i + "'>" + i + "</option>");
+                    }
+                        
+                    if (i < 24)
+                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                }
+                
+                $.each(__weeks, function (key, week) {
+                    $(".qcron-week-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + week.display + "</option>"); 
+                });
+                $.each(__weekdays, function (key, weekday) {
+                    $(".qcron-dow-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + weekday.display + "</option>");
+                });
+                
+                this.$element.empty();
+                this.$element.append($monthlyOptionOne);
+                this.$element.append($monthlyOptionTwo);
+                this.$element.append("<span>at</span>");
+                this.$element.append(this.$hourStartSelect);
+                this.$element.append("<span>:</span>");
+                this.$element.append(this.$minuteStartSelect);
             },
             build: function (event, value) {
-                if (!!value)
+                if (!!value) {
                     this.expression = value;
-                else
-                    this.expression = "0 " + this.$minuteStartSelect.val() + "/" + this.$minuteSelect.val() + " * * * ? *";
+                } else {
+                    var selectedOption = this.$element.find("input[name='qcron-monthly-option']:checked").val(),
+                        minuteStart = this.$minuteStartSelect.val(),
+                        hourStart = this.$hourStartSelect.val(),
+                        monthIncr;
+                    if (selectedOption == "option-one") {
+                        minuteStart = this.$minuteStartSelect.val();
+                        hourStart   = this.$hourStartSelect.val();
+                        monthIncr   = this.$element.find(".qcron-monthly-option-one .qcron-month-increment").val();
+                        
+                        var dom         = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
+                            
+                        this.expression = "0 " + minuteStart + " " + hourStart + " " + dom + " 1/" + monthIncr + " ? *";    
+                    } else {
+                        minuteStart = this.$minuteStartSelect.val();
+                        hourStart   = this.$hourStartSelect.val();
+                        monthIncr   = this.$element.find(".qcron-monthly-option-two .qcron-month-increment").val();
+                        
+                        var weekNum     = this.$element.find(".qcron-monthly-option-two .qcron-week-select").val(),
+                            dow         = this.$element.find(".qcron-monthly-option-two .qcron-dow-select").val();
+                        
+                        this.expression = "0 " + minuteStart + " " + hourStart + " ? 1/" + monthIncr + " " + dow + "#" + weekNum + " *";
+                    }
+                    
+                }
 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);

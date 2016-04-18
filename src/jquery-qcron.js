@@ -164,12 +164,14 @@
                 week: true,
                 month: true,
                 year: true,
-                preview: true,
+                allowOverride: true,
+                previewDates: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
-            __previewTemplate: "<div class='qcron-preview'></div>",
+            __rawInputTemplate: "<div class='qcron-raw'></div>",
+            __previewTemplate : "<div class='qcron-preview'></div>",
             
             _create: function (options) {
                 $.extend(this.options, options);
@@ -178,6 +180,7 @@
                     "qcron:expression": function (event, exp) {
                         this.expression = exp;
                         
+                        var self = this;
                         if (!!this.options.validateUrl) {
                             $.ajax({
                                 url: this.options.validateUrl,
@@ -189,14 +192,34 @@
                                 }),
                                 success: function (data) {
                                     console.log('success', data);
+                                    self.$element.find(".qcron-raw-input").val(data.expression);  
                                 },
                                 error: function (error) {
                                     console.log('error', error);
                                 }
                             });
                         }
+                    },
+                    "click .qcron-raw-validate": function () {
+                        this.value(this.$element.find(".qcron-raw-input").val());
                     }
                 });
+            },
+            
+            value: function (value) {
+                value = value.trim();
+                if (!!value) {
+                    var parts = value.split(/\s+/);
+                    if (parts.length === 6 || parts.length === 7) {
+                        var valid = this.$minutesTab.qcronMinutesTab("value", value);
+                        debugger;
+                        
+                    } else {
+                        throw new Error("jquery-qcron: The raw input must have all parts: 'seconds minutes hours dayOfMonth month dayOfWeek [year]'! Raw Value: [" + value + "]");
+                    }
+                } else {
+                    throw new Error("jquery-qcron: The raw input value must not be empty! Raw Value [" + value + "]");
+                }
             },
             
             _init: function () {
@@ -206,7 +229,15 @@
                 this.$qcronControls = $(this.__controlsTemplate);
                 this.$element.append(this.$qcronControls);
                 
-                if (this.options.preview) {
+                this.$rawInput = $(this.__rawInputTemplate).appendTo(this.$element);
+                if (!!this.options.allowOverride) {
+                    this.$rawInput.append("<input type='text' class='qcron-raw-input'/>");
+                    this.$rawInput.append("<button class='qcron-raw-validate'>Validate</button>");
+                } else {
+                    this.$rawInput.append("<input type='text' class='qcron-raw-input' disabled/>");
+                }
+                
+                if (!!this.options.validateUrl && this.options.previewDates) {
                     this.$qcronPreview = $(this.__previewTemplate);
                     this.$element.append(this.$qcronPreview);
                 }
@@ -252,7 +283,7 @@
                 }
                 
                 this.$qcronControls.tabs({
-                    active: 4,
+                    active: 5,
                     create: function (event, ui) {
                       buildTab(ui.panel);
                     },
@@ -272,12 +303,12 @@
             _renderMinutesTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__minutesTabItemTemplate));
-                var $minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab({
+                this.$minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($minutesTab);
+                this.$qcronControls.append(this.$minutesTab);
             },
 
             __hourlyTabItemTemplate: "<li><a href='#qcron-hourly-tab'>Hourly</a></li>",
@@ -391,6 +422,47 @@
                 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
+            },
+            
+            value: function (value) {
+                if (!value)
+                    return this.expression;
+                var parts = value.trim().split(/\s+/);
+                if (parts[0] !== "0") //seconds
+                    return {error: "invalid seconds. must be '0'"};
+                if (parts[2] !== "*") //hours
+                    return {error: "invalid hours. must be '*'"};
+                if (parts[3] !== "*" && parts[3] !== "?") //day of month
+                    return {error: "invalid day of month. must be '*' or '?'"};
+                if (parts[4] !== "*")
+                    return {error: "invalid month. must be '*'"};
+                if (parts[5] !== "*" && parts[5] !== "?")
+                    return {error: "invalid day of week. must be '*' or '?'"};
+                if (!!parts[6] && parts[6] !== "*")
+                    return {error: "invalid year. must be '*' or unspecified."};
+                if ((parts[3] === '?' && parts[5] === '?') || (parts[3] === '*' && parts[5] === '*'))
+                    return {error: "either day of week or day of year must be '?', but not both."};
+                
+                var minutes = parts[1];
+                if (minutes === "*")
+                    minutes = "0/1";
+                
+                var minuteParts = minutes.split("/");
+                if (minuteParts.length !== 2)
+                    return {error: "invalid minutes. must be of in the form '1/2'."};
+                
+                var start = Number(minuteParts[0]),
+                    increment = Number(minuteParts[1]);
+
+                if (isNaN(start) || isNaN(increment)) {
+                    return {
+                        error: "invalid minutes. must be integers. int/int"
+                    };
+                }
+
+                this.$element.find(".qcron-minutestart-select").val(start);
+                this.$element.find(".qcron-minute-select").val(increment);
+                return true;
             }
         });
         
@@ -581,7 +653,7 @@
             _init: function () {
                 var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
                 $monthlyOptionOne.append("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>");
-                $monthlyOptionOne.append("<span>On day</san>").appendTo($monthlyOptionOne);
+                $monthlyOptionOne.append("<span>On day</san>");
                 $monthlyOptionOne.append("<select class='qcron-dom-select'></select>");
                 $monthlyOptionOne.append("<span>every</span>");
                 $monthlyOptionOne.append("<select class='qcron-month-increment'></select>");
@@ -681,14 +753,91 @@
                 });
             },
             _init: function () {
-                $(this.element).html("<span>Hello Years!</span>");
+                var $yearlyOptionOne = $("<div class='qcron-yearly-option-one'></div>");
+                $yearlyOptionOne.append("<input type='radio' name='qcron-yearly-option' value='option-one' checked/>");
+                $yearlyOptionOne.append("<span>Every</san>");
+                var $monthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionOne);
+                $yearlyOptionOne.append("<select class='qcron-dom-select'></select>");
+
+                var $yearlyOptionTwo = $("<div class='qcron-yearly-option-two'></div>");
+                $yearlyOptionTwo.append("<input type='radio' name='qcron-yearly-option' value='option-two'/>");
+                $yearlyOptionTwo.append("<span>The</span>");
+                $yearlyOptionTwo.append("<select class='qcron-week-select'></select>");
+                $yearlyOptionTwo.append("<select class='qcron-dow-select'></select>");
+                $yearlyOptionTwo.append("<span>of</span>");
+                $yearlyOptionTwo.append("<select class='qcron-month-select'></select>");
+
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+
+                for (var i = 0; i < 60; i++) {
+                    if (i < 24)
+                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                }
+
+                $.each(__months, function (key, month) {
+                    $(".qcron-month-select", $yearlyOptionOne).append("<option value='" + key + "'>" + month.display + "</option>");
+                    $(".qcron-month-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + month.display + "</option>");
+                });
+                
+                $.each(__weeks, function (key, week) {
+                    $(".qcron-week-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + week.display + "</option>"); 
+                });
+                
+                $.each(__weekdays, function (key, weekday) {
+                    $(".qcron-dow-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + weekday.display + "</option>");
+                });
+                
+                $monthSelect.on('change', function (event) {
+                    var month = __months[$(this).val()],
+                        $monthSelect = $yearlyOptionOne.find(".qcron-dom-select");
+                    $monthSelect.empty();
+                    for (var i = 1; i <= month.days; i++) {
+                        $monthSelect.append("<option value='" + i + "'>" + i + "</option>");
+                    }
+                });
+                $monthSelect.trigger('change');
+                
+
+                this.$element.empty();
+                this.$element.append($yearlyOptionOne);
+                this.$element.append($yearlyOptionTwo);
+                this.$element.append("<span>at</span>");
+                this.$element.append(this.$hourStartSelect);
+                this.$element.append("<span>:</span>");
+                this.$element.append(this.$minuteStartSelect);
             },
             build: function (event, value) {
-                if (!!value)
+                if (!!value) {
                     this.expression = value;
-                else
-                    this.expression = "0 " + this.$minuteStartSelect.val() + "/" + this.$minuteSelect.val() + " * * * ? *";
+                } else {
+                    var selectedOption = this.$element.find("input[name='qcron-yearly-option']:checked").val(),
+                        minuteStart = this.$minuteStartSelect.val(),
+                        hourStart = this.$hourStartSelect.val(),
+                        month;
+                        
+                    if (selectedOption == "option-one") {
+                        minuteStart = this.$minuteStartSelect.val();
+                        hourStart   = this.$hourStartSelect.val();
+                        month       = this.$element.find(".qcron-yearly-option-one .qcron-month-select").val();
 
+                        var dom = this.$element.find(".qcron-yearly-option-one .qcron-dom-select").val();
+                        
+                        this.expression = "0 " + minuteStart + " " + hourStart + " " + dom + " " + month + " ? *";
+                    } else {
+                        minuteStart = this.$minuteStartSelect.val();
+                        hourStart   = this.$hourStartSelect.val();
+                        month       = this.$element.find(".qcron-yearly-option-two .qcron-month-select").val();
+
+                        var weekNum     = this.$element.find(".qcron-yearly-option-two .qcron-week-select").val(),
+                            dow         = this.$element.find(".qcron-yearly-option-two .qcron-dow-select").val();
+
+                        this.expression = "0 " + minuteStart + " " + hourStart + " ? " + month + " " + dow + "#" + weekNum + " *";
+                    }
+                    
+                }
+                    
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
             }

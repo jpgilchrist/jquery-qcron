@@ -166,7 +166,8 @@
                 year: true,
                 allowOverride: true,
                 previewDates: true,
-                validateUrl: "http://localhost/veoci/api-v1/p/cron"
+                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                defaultTab: "hourly"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -212,6 +213,8 @@
                     var parts = value.split(/\s+/);
                     if (parts.length === 6 || parts.length === 7) {
                         var valid = this.$minutesTab.qcronMinutesTab("value", value);
+                        if (!!valid.error)
+                            valid = this.$hourlyTab.qcronHourlyTab("value", value);
                         debugger;
                         
                     } else {
@@ -282,8 +285,16 @@
                     }
                 }
                 
+                var option = this.options.defaultTab;
+                var active = 
+                    option == "minutes" ? 0 : 
+                    option == "hourly"  ? 1 :
+                    option == "daily"   ? 2 :
+                    option == "weekly"  ? 3 :
+                    option == "monthly" ? 4 :
+                    option == "yearly"  ? 5 : 3;
                 this.$qcronControls.tabs({
-                    active: 5,
+                    active: active,
                     create: function (event, ui) {
                       buildTab(ui.panel);
                     },
@@ -316,12 +327,12 @@
             _renderHourlyTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__hourlyTabItemTemplate));
-                var $hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab({
+                this.$hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($hourlyTab);
+                this.$qcronControls.append(this.$hourlyTab);
             },
 
             __dailyTabItemTemplate: "<li><a href='#qcron-daily-tab'>Daily</a></li>",
@@ -329,12 +340,12 @@
             _renderDailyTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__dailyTabItemTemplate));
-                var $dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab({
+                this.$dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($dailyTab);
+                this.$qcronControls.append(this.$dailyTab);
             },
 
             __weeklyTabItemTemplate: "<li><a href='#qcron-weekly-tab'>Weekly</a></li>",
@@ -342,12 +353,12 @@
             _renderWeeklyTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__weeklyTabItemTemplate));
-                var $weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab({
+                this.$weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($weeklyTab);
+                this.$qcronControls.append(this.$weeklyTab);
             },
 
             __monthlyTabItemTemplate: "<li><a href='#qcron-monthly-tab'>Monthly</a></li>",
@@ -355,12 +366,12 @@
             _renderMonthlyTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__monthlyTabItemTemplate));
-                var $monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab({
+                this.$monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($monthlyTab);
+                this.$qcronControls.append(this.$monthlyTab);
             },
 
             __yearlyTabItemTemplate: "<li><a href='#qcron-yearly-tab'>Yearly</a></li>",
@@ -368,12 +379,12 @@
             _renderYearlyTab: function () {
                 var self = this;
                 this.$qcronControls.find("ul").append($(this.__yearlyTabItemTemplate));
-                var $yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab({
+                this.$yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab({
                     changed: function (exp) {
                         self._trigger(':expression', null, exp);
                     }
                 });
-                this.$qcronControls.append($yearlyTab);
+                this.$qcronControls.append(this.$yearlyTab);
             }
         });
         
@@ -454,11 +465,14 @@
                 var start = Number(minuteParts[0]),
                     increment = Number(minuteParts[1]);
 
-                if (isNaN(start) || isNaN(increment)) {
-                    return {
-                        error: "invalid minutes. must be integers. int/int"
-                    };
-                }
+                if (isNaN(start) || isNaN(increment))
+                    return {error: "invalid minutes. must be integers. int/int"};
+                
+                if (start < 0 || start > 59)
+                    return {error: "invalid minutes. allowed values are 0 to 59."};
+                
+                if (increment < 1 || increment > 59)
+                    return {error: "invalid minutes increment. allowed values are 1 to 59."};
 
                 this.$element.find(".qcron-minutestart-select").val(start);
                 this.$element.find(".qcron-minute-select").val(increment);
@@ -513,8 +527,57 @@
 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
+            },
+            value: function (value) {
+                if (!value)
+                    return this.expression;
+                var parts = value.trim().split(/\s+/);
+                if (parts[0] !== "0") // seconds
+                    return {error: "invalid seconds. must be '0'"};
+                if (parts[3] !== "*" && parts[3] !== "?") // day of month
+                    return {error: "invalid day of month. must be '*' or '?'"};
+                if (parts[4] !== "*") // month
+                    return {error: "invalid month. must be '*'"};
+                if (parts[5] !== "*" && parts[5] !== "?") // day of week
+                    return {error: "invalid day of week. must be '*' or '?'"};
+                if (!!parts[6] && parts[6] !== "*") // year
+                    return {error: "invalid year. must be '*' or unspecified."};
+                if ((parts[3] === '?' && parts[5] === '?') || (parts[3] === '*' && parts[5] === '*')) // at least day of month or day of  year needs to be '?'
+                    return {error: "either day of week or day of year must be '?', but not both."};
+
+                var minutes = Number(parts[1]);
+                if (isNaN(minutes))
+                    return {error: "invalid minutes. must be an integer."};
+                
+                if (minutes < 0 || minutes > 59)
+                    return {error: "invalid minutes. allowed values are 0 to 59."};
+                
+                var hours = parts[2];
+                if (hours === "*")
+                    hours = "0/1";
+
+                var hourParts = hours.split("/");
+                if (hourParts.length !== 2)
+                    return {error: "invalid hours. must be of in the form '1/2'."};
+
+                var start = Number(hourParts[0]),
+                    increment = Number(hourParts[1]);
+
+                if (isNaN(start) || isNaN(increment))
+                    return {error: "invalid hours. must be integers. int/int"};
+                
+                if (start < 0 || start > 59)
+                    return {error: "invalid hours. allowed values are 0 to 59."};
+                
+                if (increment < 1 || increment > 59)
+                    return {error: "invalid hours. allowed values are 1 to 59."};
+                
+                this.$element.find(".qcron-minutestart-select").val(minutes);
+                this.$element.find(".qcron-hourstart-select").val(start);
+                this.$element.find(".qcron-hour-select").val(increment);
+                
+                return true;
             }
-            
         });
         
         $.widget("jpgilchrist.qcronDailyTab", {

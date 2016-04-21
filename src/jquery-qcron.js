@@ -18,31 +18,31 @@
         var __weekdays = {
             1: {
                 display: "Sunday",
-                value: "SUN"
+                value: 1
             }, 
             2: {
                 display: "Monday",
-                value: "MON"
+                value: 2
             }, 
             3 : {
                 display: "Tuesday",
-                value: "TUE"
+                value: 3
             }, 
             4: {
                 display: "Wednesday",
-                value: "WED"
+                value: 4
             }, 
             5: {
                 display: "Thursday",
-                value: "THU"
+                value: 5
             }, 
             6: {
                 display: "Friday",
-                value: "FRI"
+                value: 6
             }, 
             7: {
                 display: "Saturday",
-                value: "SAT"
+                value: 7
             }
         };
         
@@ -167,7 +167,7 @@
                 allowOverride: true,
                 previewDates: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron",
-                defaultTab: "daily"
+                defaultTab: "weekly"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -217,6 +217,8 @@
                             valid = this.$hourlyTab.qcronHourlyTab("value", value);
                         if (!!valid.error)
                             valid = this.$dailyTab.qcronDailyTab("value", value);
+                        if (!!valid.error)
+                            valid = this.$weeklyTab.qcronWeeklyTab("value", value);
                         debugger;
                         
                     } else {
@@ -644,12 +646,10 @@
                     return {error: "invalid seconds. must be '0'"};
                 if (parts[4] !== "*") // month
                     return {error: "invalid month. must be '*'"};
-                if (parts[5] !== "*" && parts[5] !== "?") // day of week
-                    return {error: "invalid day of week. must be '*' or '?'"};
+                if (parts[5] !== "?") // day of week
+                    return {error: "invalid day of week. must be '?' when specifiying a day of month."};
                 if (!!parts[6] && parts[6] !== "*") // year
                     return {error: "invalid year. must be '*' or unspecified."};
-                if ((parts[3] === '?' && parts[5] === '?') || (parts[3] === '*' && parts[5] === '*')) // at least day of month or day of  year needs to be '?'
-                    return {error: "either day of week or day of year must be '?', but not both."};
 
                 var minutes = Number(parts[1]);
                 if (isNaN(minutes))
@@ -751,6 +751,53 @@
 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
+            },
+            value: function (value) {
+                if (!value)
+                    return this.expression;
+
+                var parts = value.trim().split(/\s+/);
+                if (parts[0] !== "0") // seconds
+                    return {error: "invalid seconds. must be '0'"};
+                if (parts[3] !== "?")
+                    return {error: "invalid dom. must be '?' when specifiying a day of week."};
+                if (parts[4] !== "*") // month
+                    return {error: "invalid month. must be '*'"};
+                if (!!parts[6] && parts[6] !== "*") // year
+                    return {error: "invalid year. must be '*' or unspecified."};
+
+                var minutes = Number(parts[1]);
+                if (isNaN(minutes))
+                    return {error: "invalid minutes. must be an integer."};
+
+                if (minutes < 0 || minutes > 59)
+                    return {error: "invalid minutes. allowed values are 0 to 59."};
+
+                var hours = Number(parts[2]);
+                if (isNaN(hours))
+                    return {error: "invalid hours. must be an integer."};
+
+                if (hours < 0 || hours > 59) 
+                    return {error: "invalid hours. allowed values are 0 to 59."};
+
+                var dow = parts[5];
+                if (dow === "*")
+                    dow = "1,2,3,4,5,6,7";
+
+                var dowParts = dow.split(",");
+                for (var i = 0; i < dowParts.length; i++) {
+                    var d = Number(dowParts[i]);
+                    if (isNaN(d))
+                        return {error: "invalid day of week. currently, only numeric values are supported."};
+                    if (d < 1 || d > 7)
+                        return {error: "invalid day of week. allowed values are 1 to 7."};
+                    this.$element.find(".qcron-dow-input[value='" + d + "']").attr('checked', true);
+                }
+
+                this.$element.find(".qcron-minutestart-select").val(minutes);
+                this.$element.find(".qcron-hourstart-select").val(hours);
+
+                return true;
             }
         });
         

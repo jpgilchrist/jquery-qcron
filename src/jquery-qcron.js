@@ -448,8 +448,11 @@
             },
             
             value: function (value) {
-                var builder = new this._builder();
+                if (!value)
+                    return this.expression;
+
                 var parts = value.split(/\s+/);
+                var builder = this._builder();
                 try {
                     builder.seconds(parts[0])
                         .minutes(parts[1])
@@ -466,103 +469,99 @@
             },
 
             _builder: function () {
-                var s = "0", mi, h, dom, mo, dow, y;
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
 
-                this.seconds = function (seconds) {
-                    if (seconds !== "0")
-                        throw new Error("seconds must be 0");
-                    s = seconds;
-                    return this;
-                };
+                    this.seconds = function (seconds) {
+                        var p = /^0$/;
+                        if (seconds.match(p) === null)
+                            throw new Error("seconds must be '0'");
+                        s = seconds;
+                        return this;
+                    };
 
-                this.minutes = function (minutes) {
-                    if (!s)
-                        throw new Error("must set seconds first.");
-                    if (minutes === "*")
-                        minutes = "0/1";
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])\/([1-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be in the form {int}/{int}")
+                        mi = minutes;
 
-                    if (minutes.indexOf("/") === -1)
-                        throw new Error("minutes should be in the form {start}/{increment}");
+                        ui.$minuteStartSelect.val(match[1]);
+                        ui.$minuteSelect.val(match[2]);
 
-                    var parts = minutes.split("/");
-                    if (parts.length !== 2)
-                        throw new Error("minutes should be in the form {start}/{increment}");
-                    var m = parts[0],
-                        i = parts[1];
-                    if (m < 0 || m > 59)
-                        throw new Error("minutes should be within 0-59");
-                    if (i < 1 || i > 59)
-                        throw new Error("minutes increment should be within 1-59");
-                    mi = minutes;
-                    return this;
-                };
+                        return this;
+                    };
 
-                this.hours = function (hours) {
-                    if (!mi)
-                        throw new Error("must set minutes first.");
-                    if (hours !== "*")
-                        throw new Error("hours must be '*'");
-                    h = hours;
-                    return this;
-                };
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        var p = /^[*]$/;
+                        if (hours.match(p) === null)
+                            throw new Error("hours must be '*'");
+                        h = hours;
+                        return this;
+                    };
 
-                this.dayOfMonth = function (dayOfMonth) {
-                    if (!h)
-                        throw new Error("must set hours first");
-                    if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                        throw new Error("dom must be '*' or '?'");
-                    dom = dayOfMonth;
-                    return this;
-                };
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        var p = /^[*?]$/;
+                        if (dayOfMonth.match(p) === null)
+                            throw new Error("day of month must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
 
-                this.month = function (month) {
-                    if (!dom)
-                        throw new Error('must set dom first');
-                    if (month !== "*")
-                        throw new Error("month must be '*'");
-                    mo = month;
-                    return this;
-                };
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        var p = /^[*]$/;
+                        if (month.match(p) === null)
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
 
-                this.dayOfWeek = function (dayOfWeek) {
-                    if (!mo)
-                        throw new Error("must set month first");
-                    if (dom !== '?')
-                        if (dayOfWeek !== '?')
-                            throw new Error("dom is not '?', therefore dow must be '?'");
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        var p = /^[*?]$/;
+                        if (dayOfWeek.match(p) === null)
+                            throw new Error("day of week must be '*' or '?'");
+                        if (dom === "?" && dayOfWeek === "?")
+                            throw new Error("only day of week or day of month can be '?' not both.");
+                        if (dom === "*" && dayOfWeek === "*")
+                            throw new Error("either day of week or day of month must be '?'.");
+                        dow = dayOfWeek;
+                        return this;
+                    };
 
-                    if (dom === '?')
-                        if (dayOfWeek === '?')
-                            throw new Error("dom is '?', therefore dow must not be '?'");
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        var p = /^[*]$/;
+                        if (p.exec(year) === null)
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
 
-                    if (dayOfWeek !== '?' && dayOfWeek !== '*')
-                        throw new Error("dow must either be '?' or '*'");
-
-                    dow = dayOfWeek;
-                    return this;
-                };
-
-                this.year = function (year) {
-                    if (!dow)
-                        throw new Error("must set dow first");
-                    if (year !== "*")
-                        throw new Error("year must be '*'");
-                    y = year;
-                    return this;
-                };
-
-                this.build = function () {
-                    var expression = "";
-                    if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
-                        expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
-                        if (!!y)
-                            expression += " " + y;
-                    } else {
-                        throw new Error("must specify all values before building");
-                    }
-
-                    return expression;
-                };
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
         
@@ -617,52 +616,175 @@
             value: function (value) {
                 if (!value)
                     return this.expression;
-                var parts = value.trim().split(/\s+/);
-                if (parts[0] !== "0") // seconds
-                    return {error: "invalid seconds. must be '0'"};
-                if (parts[3] !== "*" && parts[3] !== "?") // day of month
-                    return {error: "invalid day of month. must be '*' or '?'"};
-                if (parts[4] !== "*") // month
-                    return {error: "invalid month. must be '*'"};
-                if (parts[5] !== "*" && parts[5] !== "?") // day of week
-                    return {error: "invalid day of week. must be '*' or '?'"};
-                if (!!parts[6] && parts[6] !== "*") // year
-                    return {error: "invalid year. must be '*' or unspecified."};
-                if ((parts[3] === '?' && parts[5] === '?') || (parts[3] === '*' && parts[5] === '*')) // at least day of month or day of  year needs to be '?'
-                    return {error: "either day of week or day of year must be '?', but not both."};
 
-                var minutes = Number(parts[1]);
-                if (isNaN(minutes))
-                    return {error: "invalid minutes. must be an integer."};
-                
-                if (minutes < 0 || minutes > 59)
-                    return {error: "invalid minutes. allowed values are 0 to 59."};
-                
-                var hours = parts[2];
-                if (hours === "*")
-                    hours = "0/1";
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                try {
+                    builder.seconds(parts[0])
+                        .minutes(parts[1])
+                        .hours(parts[2])
+                        .dayOfMonth(parts[3])
+                        .month(parts[4])
+                        .dayOfWeek(parts[5]);
+                    if (!!parts[6])
+                        builder.year(parts[6]);
+                    return builder.build();
+                } catch (ex) {
+                    console.log('error setting hourly tab', ex);
+                }
 
-                var hourParts = hours.split("/");
-                if (hourParts.length !== 2)
-                    return {error: "invalid hours. must be of in the form '1/2'."};
+                //if (!value)
+                //    return this.expression;
+                //var parts = value.trim().split(/\s+/);
+                //if (parts[0] !== "0") // seconds
+                //    return {error: "invalid seconds. must be '0'"};
+                //if (parts[3] !== "*" && parts[3] !== "?") // day of month
+                //    return {error: "invalid day of month. must be '*' or '?'"};
+                //if (parts[4] !== "*") // month
+                //    return {error: "invalid month. must be '*'"};
+                //if (parts[5] !== "*" && parts[5] !== "?") // day of week
+                //    return {error: "invalid day of week. must be '*' or '?'"};
+                //if (!!parts[6] && parts[6] !== "*") // year
+                //    return {error: "invalid year. must be '*' or unspecified."};
+                //if ((parts[3] === '?' && parts[5] === '?') || (parts[3] === '*' && parts[5] === '*')) // at least day of month or day of  year needs to be '?'
+                //    return {error: "either day of week or day of year must be '?', but not both."};
+                //
+                //var minutes = Number(parts[1]);
+                //if (isNaN(minutes))
+                //    return {error: "invalid minutes. must be an integer."};
+                //
+                //if (minutes < 0 || minutes > 59)
+                //    return {error: "invalid minutes. allowed values are 0 to 59."};
+                //
+                //var hours = parts[2];
+                //if (hours === "*")
+                //    hours = "0/1";
+                //
+                //var hourParts = hours.split("/");
+                //if (hourParts.length !== 2)
+                //    return {error: "invalid hours. must be of in the form '1/2'."};
+                //
+                //var start = Number(hourParts[0]),
+                //    increment = Number(hourParts[1]);
+                //
+                //if (isNaN(start) || isNaN(increment))
+                //    return {error: "invalid hours. must be integers. int/int"};
+                //
+                //if (start < 0 || start > 59)
+                //    return {error: "invalid hours. allowed values are 0 to 59."};
+                //
+                //if (increment < 1 || increment > 59)
+                //    return {error: "invalid hours. allowed values are 1 to 59."};
+                //
+                //this.$element.find(".qcron-minutestart-select").val(minutes);
+                //this.$element.find(".qcron-hourstart-select").val(start);
+                //this.$element.find(".qcron-hour-select").val(increment);
+                //
+                //return true;
+            },
+            _builder: function () {
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
 
-                var start = Number(hourParts[0]),
-                    increment = Number(hourParts[1]);
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
 
-                if (isNaN(start) || isNaN(increment))
-                    return {error: "invalid hours. must be integers. int/int"};
-                
-                if (start < 0 || start > 59)
-                    return {error: "invalid hours. allowed values are 0 to 59."};
-                
-                if (increment < 1 || increment > 59)
-                    return {error: "invalid hours. allowed values are 1 to 59."};
-                
-                this.$element.find(".qcron-minutestart-select").val(minutes);
-                this.$element.find(".qcron-hourstart-select").val(start);
-                this.$element.find(".qcron-hour-select").val(increment);
-                
-                return true;
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first.");
+                        if (isNaN(minutes))
+                            throw new Error("minutes must be a number.");
+                        if (minutes < 0 || minutes > 59)
+                            throw new Error("minutes should  be within 0-59");
+                        mi = minutes;
+                        return this;
+                    };
+
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        if (hours === "*")
+                            hours = "0/1";
+                        var hourParts = hours.split("/");
+                        if (hourParts.length !== 2)
+                            throw new Error("hours should be in the form {start}/{increment}");
+                        var start = Number(hourParts[0]),
+                            increment = Number(hourParts[1]);
+                        if (isNaN(start) || isNaN(increment))
+                            return {error: "invalid hours. must be integers. int/int"};
+
+                        if (start < 0 || start > 59)
+                            return {error: "invalid hours. allowed values are 0 to 59."};
+
+                        if (increment < 1 || increment > 59)
+                            return {error: "invalid hours. allowed values are 1 to 59."};
+
+                        return this;
+                    };
+
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        if (dom !== '?')
+                            if (dayOfWeek !== '?')
+                                throw new Error("dom is not '?', therefore dow must be '?'");
+
+                        if (dom === '?')
+                            if (dayOfWeek === '?')
+                                throw new Error("dom is '?', therefore dow must not be '?'");
+
+                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
+                            throw new Error("dow must either be '?' or '*'");
+
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        if (year !== "*")
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
         
@@ -722,57 +844,176 @@
             value: function (value) {
                 if (!value)
                     return this.expression;
-                
-                var parts = value.trim().split(/\s+/);
-                if (parts[0] !== "0") // seconds
-                    return {error: "invalid seconds. must be '0'"};
-                if (parts[4] !== "*") // month
-                    return {error: "invalid month. must be '*'"};
-                if (parts[5] !== "?") // day of week
-                    return {error: "invalid day of week. must be '?' when specifiying a day of month."};
-                if (!!parts[6] && parts[6] !== "*") // year
-                    return {error: "invalid year. must be '*' or unspecified."};
 
-                var minutes = Number(parts[1]);
-                if (isNaN(minutes))
-                    return {error: "invalid minutes. must be an integer."};
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                try {
+                    builder.seconds(parts[0])
+                        .minutes(parts[1])
+                        .hours(parts[2])
+                        .dayOfMonth(parts[3])
+                        .month(parts[4])
+                        .dayOfWeek(parts[5]);
+                    if (!!parts[6])
+                        builder.year(parts[6]);
+                    return builder.build();
+                } catch (ex) {
+                    console.log('error setting daily tab', ex);
+                }
 
-                if (minutes < 0 || minutes > 59)
-                    return {error: "invalid minutes. allowed values are 0 to 59."};
+                //if (!value)
+                //    return this.expression;
+                //
+                //var parts = value.trim().split(/\s+/);
+                //if (parts[0] !== "0") // seconds
+                //    return {error: "invalid seconds. must be '0'"};
+                //if (parts[4] !== "*") // month
+                //    return {error: "invalid month. must be '*'"};
+                //if (parts[5] !== "?") // day of week
+                //    return {error: "invalid day of week. must be '?' when specifiying a day of month."};
+                //if (!!parts[6] && parts[6] !== "*") // year
+                //    return {error: "invalid year. must be '*' or unspecified."};
+                //
+                //var minutes = Number(parts[1]);
+                //if (isNaN(minutes))
+                //    return {error: "invalid minutes. must be an integer."};
+                //
+                //if (minutes < 0 || minutes > 59)
+                //    return {error: "invalid minutes. allowed values are 0 to 59."};
+                //
+                //var hours = Number(parts[2]);
+                //if (isNaN(hours))
+                //    return {error: "invalid hours. must be an integer."};
+                //
+                //if (hours < 0 || hours > 59)
+                //    return {error: "invalid hours. allowed values are 0 to 59."};
+                //
+                //var dom = parts[3];
+                //if (dom === "*")
+                //    dom = "1/1";
+                //
+                //var domParts = dom.split("/");
+                //if (domParts.length !== 2)
+                //    return {error: "invalid day of month. must be of in the form '1/2'."};
+                //
+                //var start = Number(domParts[0]),
+                //    increment = Number(domParts[1]);
+                //
+                //if (isNaN(start) || isNaN(increment))
+                //    return {error: "invalid day of month. must be integers. int/int"};
+                //
+                //if (start < 1 || start > 31)
+                //    return {error: "invalid day of month. allowed values are 0 to 59."};
+                //
+                //if (increment < 1 || increment > 31)
+                //    return {error: "invalid day of month increment. allowed values are 1 to 59."};
+                //
+                //this.$element.find(".qcron-minutestart-select").val(minutes);
+                //this.$element.find(".qcron-hourstart-select").val(hours);
+                //this.$element.find(".qcron-domstart-select").val(start);
+                //this.$element.find(".qcron-domincrement-select").val(increment);
+                //
+                //return true;
+            },
+            _builder: function () {
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
 
-                var hours = Number(parts[2]);
-                if (isNaN(hours))
-                    return {error: "invalid hours. must be an integer."};
-                
-                if (hours < 0 || hours > 59) 
-                    return {error: "invalid hours. allowed values are 0 to 59."};
-                
-                var dom = parts[3];
-                if (dom === "*")
-                    dom = "1/1";
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
 
-                var domParts = dom.split("/");
-                if (domParts.length !== 2)
-                    return {error: "invalid day of month. must be of in the form '1/2'."};
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first.");
+                        if (minutes === "*")
+                            minutes = "0/1";
+                        var parts = minutes.split("/");
+                        if (parts.length !== 2)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+                        var m = Number(parts[0]),
+                            i = Number(parts[1]);
+                        if (isNaN(m) || isNaN(i))
+                            throw new Error("minutes should be in the form {int}/{int}");
+                        if (m < 0 || m > 59)
+                            throw new Error("minutes should be within 0-59");
+                        if (i < 1 || i > 59)
+                            throw new Error("minutes increment should be within 1-59");
+                        mi = minutes;
+                        return this;
+                    };
 
-                var start = Number(domParts[0]),
-                    increment = Number(domParts[1]);
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        if (hours !== "*")
+                            throw new Error("hours must be '*'");
+                        h = hours;
+                        return this;
+                    };
 
-                if (isNaN(start) || isNaN(increment))
-                    return {error: "invalid day of month. must be integers. int/int"};
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
 
-                if (start < 1 || start > 31)
-                    return {error: "invalid day of month. allowed values are 0 to 59."};
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
 
-                if (increment < 1 || increment > 31)
-                    return {error: "invalid day of month increment. allowed values are 1 to 59."};
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        if (dom !== '?')
+                            if (dayOfWeek !== '?')
+                                throw new Error("dom is not '?', therefore dow must be '?'");
 
-                this.$element.find(".qcron-minutestart-select").val(minutes);
-                this.$element.find(".qcron-hourstart-select").val(hours);
-                this.$element.find(".qcron-domstart-select").val(start);
-                this.$element.find(".qcron-domincrement-select").val(increment);
+                        if (dom === '?')
+                            if (dayOfWeek === '?')
+                                throw new Error("dom is '?', therefore dow must not be '?'");
 
-                return true;
+                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
+                            throw new Error("dow must either be '?' or '*'");
+
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        if (year !== "*")
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
         
@@ -838,48 +1079,169 @@
                 if (!value)
                     return this.expression;
 
-                var parts = value.trim().split(/\s+/);
-                if (parts[0] !== "0") // seconds
-                    return {error: "invalid seconds. must be '0'"};
-                if (parts[3] !== "?")
-                    return {error: "invalid dom. must be '?' when specifiying a day of week."};
-                if (parts[4] !== "*") // month
-                    return {error: "invalid month. must be '*'"};
-                if (!!parts[6] && parts[6] !== "*") // year
-                    return {error: "invalid year. must be '*' or unspecified."};
-
-                var minutes = Number(parts[1]);
-                if (isNaN(minutes))
-                    return {error: "invalid minutes. must be an integer."};
-
-                if (minutes < 0 || minutes > 59)
-                    return {error: "invalid minutes. allowed values are 0 to 59."};
-
-                var hours = Number(parts[2]);
-                if (isNaN(hours))
-                    return {error: "invalid hours. must be an integer."};
-
-                if (hours < 0 || hours > 59) 
-                    return {error: "invalid hours. allowed values are 0 to 59."};
-
-                var dow = parts[5];
-                if (dow === "*")
-                    dow = "1,2,3,4,5,6,7";
-
-                var dowParts = dow.split(",");
-                for (var i = 0; i < dowParts.length; i++) {
-                    var d = Number(dowParts[i]);
-                    if (isNaN(d))
-                        return {error: "invalid day of week. currently, only numeric values are supported."};
-                    if (d < 1 || d > 7)
-                        return {error: "invalid day of week. allowed values are 1 to 7."};
-                    this.$element.find(".qcron-dow-input[value='" + d + "']").attr('checked', true);
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                try {
+                    builder.seconds(parts[0])
+                        .minutes(parts[1])
+                        .hours(parts[2])
+                        .dayOfMonth(parts[3])
+                        .month(parts[4])
+                        .dayOfWeek(parts[5]);
+                    if (!!parts[6])
+                        builder.year(parts[6]);
+                    return builder.build();
+                } catch (ex) {
+                    console.log('error setting weekly tab', ex);
                 }
 
-                this.$element.find(".qcron-minutestart-select").val(minutes);
-                this.$element.find(".qcron-hourstart-select").val(hours);
+                //if (!value)
+                //    return this.expression;
+                //
+                //var parts = value.trim().split(/\s+/);
+                //if (parts[0] !== "0") // seconds
+                //    return {error: "invalid seconds. must be '0'"};
+                //if (parts[3] !== "?")
+                //    return {error: "invalid dom. must be '?' when specifiying a day of week."};
+                //if (parts[4] !== "*") // month
+                //    return {error: "invalid month. must be '*'"};
+                //if (!!parts[6] && parts[6] !== "*") // year
+                //    return {error: "invalid year. must be '*' or unspecified."};
+                //
+                //var minutes = Number(parts[1]);
+                //if (isNaN(minutes))
+                //    return {error: "invalid minutes. must be an integer."};
+                //
+                //if (minutes < 0 || minutes > 59)
+                //    return {error: "invalid minutes. allowed values are 0 to 59."};
+                //
+                //var hours = Number(parts[2]);
+                //if (isNaN(hours))
+                //    return {error: "invalid hours. must be an integer."};
+                //
+                //if (hours < 0 || hours > 59)
+                //    return {error: "invalid hours. allowed values are 0 to 59."};
+                //
+                //var dow = parts[5];
+                //if (dow === "*")
+                //    dow = "1,2,3,4,5,6,7";
+                //
+                //var dowParts = dow.split(",");
+                //for (var i = 0; i < dowParts.length; i++) {
+                //    var d = Number(dowParts[i]);
+                //    if (isNaN(d))
+                //        return {error: "invalid day of week. currently, only numeric values are supported."};
+                //    if (d < 1 || d > 7)
+                //        return {error: "invalid day of week. allowed values are 1 to 7."};
+                //    this.$element.find(".qcron-dow-input[value='" + d + "']").attr('checked', true);
+                //}
+                //
+                //this.$element.find(".qcron-minutestart-select").val(minutes);
+                //this.$element.find(".qcron-hourstart-select").val(hours);
+                //
+                //return true;
+            },
+            _builder: function () {
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
 
-                return true;
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
+
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first.");
+                        if (minutes === "*")
+                            minutes = "0/1";
+
+                        if (minutes.indexOf("/") === -1)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+
+                        var parts = minutes.split("/");
+                        if (parts.length !== 2)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+                        var m = parts[0],
+                            i = parts[1];
+                        if (m < 0 || m > 59)
+                            throw new Error("minutes should be within 0-59");
+                        if (i < 1 || i > 59)
+                            throw new Error("minutes increment should be within 1-59");
+                        mi = minutes;
+                        return this;
+                    };
+
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        if (hours !== "*")
+                            throw new Error("hours must be '*'");
+                        h = hours;
+                        return this;
+                    };
+
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        if (dom !== '?')
+                            if (dayOfWeek !== '?')
+                                throw new Error("dom is not '?', therefore dow must be '?'");
+
+                        if (dom === '?')
+                            if (dayOfWeek === '?')
+                                throw new Error("dom is '?', therefore dow must not be '?'");
+
+                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
+                            throw new Error("dow must either be '?' or '*'");
+
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        if (year !== "*")
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
         
@@ -982,6 +1344,128 @@
 
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
+            },
+            value: function (value) {
+                if (!value)
+                    return this.expression;
+
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                try {
+                    builder.seconds(parts[0])
+                        .minutes(parts[1])
+                        .hours(parts[2])
+                        .dayOfMonth(parts[3])
+                        .month(parts[4])
+                        .dayOfWeek(parts[5]);
+                    if (!!parts[6])
+                        builder.year(parts[6]);
+                    return builder.build();
+                } catch (ex) {
+                    console.log('error setting monthly tab', ex);
+                }
+            },
+            _builder: function () {
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
+
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
+
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first.");
+                        if (minutes === "*")
+                            minutes = "0/1";
+
+                        if (minutes.indexOf("/") === -1)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+
+                        var parts = minutes.split("/");
+                        if (parts.length !== 2)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+                        var m = parts[0],
+                            i = parts[1];
+                        if (m < 0 || m > 59)
+                            throw new Error("minutes should be within 0-59");
+                        if (i < 1 || i > 59)
+                            throw new Error("minutes increment should be within 1-59");
+                        mi = minutes;
+                        return this;
+                    };
+
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        if (hours !== "*")
+                            throw new Error("hours must be '*'");
+                        h = hours;
+                        return this;
+                    };
+
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        if (dom !== '?')
+                            if (dayOfWeek !== '?')
+                                throw new Error("dom is not '?', therefore dow must be '?'");
+
+                        if (dom === '?')
+                            if (dayOfWeek === '?')
+                                throw new Error("dom is '?', therefore dow must not be '?'");
+
+                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
+                            throw new Error("dow must either be '?' or '*'");
+
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        if (year !== "*")
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
         
@@ -1091,6 +1575,128 @@
                     
                 if (!!this.options.changed)
                     this.options.changed.call(this, this.expression);
+            },
+            value: function (value) {
+                if (!value)
+                    return this.expression;
+
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                try {
+                    builder.seconds(parts[0])
+                        .minutes(parts[1])
+                        .hours(parts[2])
+                        .dayOfMonth(parts[3])
+                        .month(parts[4])
+                        .dayOfWeek(parts[5]);
+                    if (!!parts[6])
+                        builder.year(parts[6]);
+                    return builder.build();
+                } catch (ex) {
+                    console.log('error setting yearly tab', ex);
+                }
+            },
+            _builder: function () {
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
+
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
+
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first.");
+                        if (minutes === "*")
+                            minutes = "0/1";
+
+                        if (minutes.indexOf("/") === -1)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+
+                        var parts = minutes.split("/");
+                        if (parts.length !== 2)
+                            throw new Error("minutes should be in the form {start}/{increment}");
+                        var m = parts[0],
+                            i = parts[1];
+                        if (m < 0 || m > 59)
+                            throw new Error("minutes should be within 0-59");
+                        if (i < 1 || i > 59)
+                            throw new Error("minutes increment should be within 1-59");
+                        mi = minutes;
+                        return this;
+                    };
+
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        if (hours !== "*")
+                            throw new Error("hours must be '*'");
+                        h = hours;
+                        return this;
+                    };
+
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hours first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        if (dom !== '?')
+                            if (dayOfWeek !== '?')
+                                throw new Error("dom is not '?', therefore dow must be '?'");
+
+                        if (dom === '?')
+                            if (dayOfWeek === '?')
+                                throw new Error("dom is '?', therefore dow must not be '?'");
+
+                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
+                            throw new Error("dow must either be '?' or '*'");
+
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        if (year !== "*")
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this);
             }
         });
                     

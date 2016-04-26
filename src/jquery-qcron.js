@@ -1120,12 +1120,12 @@
             },
             _init: function () {
                 var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
-                $monthlyOptionOne.append("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>");
+                this.$monthlyOptionOneRadio = $("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>").appendTo($monthlyOptionOne);
                 $monthlyOptionOne.append("<span>On day</san>");
                 this.$mo1DomStartSelect = $("<select class='qcron-dom-select'></select>").appendTo($monthlyOptionOne);
                 
                 var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>");
-                $monthlyOptionTwo.append("<input type='radio' name='qcron-monthly-option' value='option-two'/>");
+                this.$monthlyOptionTwoRadio = $("<input type='radio' name='qcron-monthly-option' value='option-two'/>").appendTo($monthlyOptionTwo);
                 $monthlyOptionTwo.append("<span>The</span>");
                 this.$mo2WeekSelect = $("<select class='qcron-week-select'></select>").appendTo($monthlyOptionTwo);
                 this.$mo2DowSelect = $("<select class='qcron-dow-select'></select>").appendTo($monthlyOptionTwo);
@@ -1283,31 +1283,18 @@
                         if (!mo)
                             throw new Error("must set month first");
                         
-                        var p;
-                        if (selectedOption == "option-one") {
-                            var daysInMonth = __months[mo.split("/")[0]].days;
-                            if (daysInMonth == 29) {
-                                p = /^([1-9]|[12]\d)$/;
-                            } else if (daysInMonth == 30) {
-                                p = /^([1-9]|[12]\d|30)$/;
-                            } else {
-                                p = /^([1-9]|[12]\d|3[01])$/;
-                            }
+                        var p = /^([1-9]|[12]\d|3[01])|([?])$/;
+                        var match = p.exec(dayOfMonth);
+                        if (match === null)
+                            throw new Error("invalid day of month should be of the form {1-31}");
+                        
+                        dom = dayOfMonth;
 
-                            var match = p.exec(dayOfMonth);
-                            if (match === null)
-                                throw new Error("invalid day of month for the month of " + __months[mo.split("/")[0]].display);
-                            dom = dayOfMonth;
-
-                            ui.$mo1DomStartSelect.val(dom);    
-                        } else if (selectedOption == "option-two") {
-                            p = /^[?]$/;
-                            if (p.exec(dayOfMonth) === null)
-                                throw new Error("day of month must be '?' since day of week is not '?'");
-                            dom = dayOfMonth;
-                        } else {
-                            throw new Error("invalid monthly option");
-                        }
+                        ui.$monthlyOptionOneRadio.attr('checked', !!match[1]);
+                        ui.$monthlyOptionTwoRadio.attr('checked', !match[1]);
+                        if (!!match[1])
+                            ui.$mo1DomStartSelect.val(dom);
+                            
                         return this;
                     };
 
@@ -1315,20 +1302,22 @@
                         if (!dom)
                             throw new Error("must set day of month first");
                         
-                        var p;
-                        if (selectedOption === "option-one") {
-                            p = /^[?]$/;
-                            if (p.exec(dayOfWeek) === null)
-                                throw new Error("day of week must be '?' since day of month is not '?'");
-                            dow = dayOfWeek;
-                        } else if (selectedOption === "option-two") {
-                            p = /^([1-7])#([1-4])$/;
-                            var match = p.exec(dayOfWeek);
-                            if (match === null)
-                                throw new Error('day of week must be of the form {1-7}#{1-4}');
-                        } else {
-                            throw new Error("invalid monthly option");
+                        var p = /^([1-7])#([1-4])|([?])$/;
+                        var match = p.exec(dayOfWeek);
+                        if (match ===  null)
+                            throw new Error("Invalid day of week should of the form {1-7}#{1-4} or '?'");
+                        if (match[3] && dom === "?")
+                            throw new Error("Invalid day of week day. Day of month is not defined, therefore day of week must be.");
+                        if (!match[3] && dom !== "?")
+                            throw new Error("Invalid day of week. Day of months is already defined, therefore day of week cannot be.");
+                        
+                        dow = dayOfWeek;
+                        
+                        if (!match[3]) {
+                            ui.$mo2WeekSelect.val(match[2]);
+                            ui.$mo2DowSelect.val(match[1]);
                         }
+                        
                         return this;
                     };
 

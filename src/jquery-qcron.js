@@ -166,7 +166,7 @@
                 year: true,
                 allowOverride: true,
                 previewDates: true,
-                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                validateUrl: null,
                 defaultTab: "yearly"
             },
             
@@ -200,6 +200,8 @@
                                     console.log('error', error);
                                 }
                             });
+                        } else {
+                            self.$element.find(".qcron-raw-input").val(this.expression);  
                         }
                     },
                     "click .qcron-raw-validate": function () {

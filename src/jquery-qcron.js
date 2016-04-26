@@ -1044,9 +1044,9 @@
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
-                        var p = /^[*]$/;
+                        var p = /^[?]$/;
                         if (p.exec(dayOfMonth) === null)
-                            throw new Error("day of month must be '*'");
+                            throw new Error("day of month must be '?' since day of week is not '?'");
                         dom = dayOfMonth;
                         return this;
                     };
@@ -1070,7 +1070,7 @@
                             ui.$dayOfWeekCheckboxes.find(".qcron-dow-input[value='" + days[i] + "']").attr('checked', true);
                         }
                         
-                        dow = processedDays.joing(",");
+                        dow = processedDays.join(",");
                         return this;
                     };
 
@@ -1201,9 +1201,9 @@
                     this.options.changed.call(this, this.expression);
             },
             value: function (value) {
+                var dfd = $.Deferred();
                 if (!value)
-                    return this.expression;
-
+                    dfd.resolve(this.expression);
                 var parts = value.split(/\s+/);
                 var builder = this._builder();
                 try {
@@ -1215,10 +1215,11 @@
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
-                    return builder.build();
+                    dfd.resolve(builder.build());
                 } catch (ex) {
-                    console.log('error setting monthly tab', ex);
+                    dfd.reject(ex);
                 }
+                return dfd.promise();
             },
             _builder: function () {
                 function Builder(context) {
@@ -1432,9 +1433,9 @@
                     this.options.changed.call(this, this.expression);
             },
             value: function (value) {
+                var dfd = $.Deferred();
                 if (!value)
-                    return this.expression;
-
+                    dfd.resolve(this.expression);
                 var parts = value.split(/\s+/);
                 var builder = this._builder();
                 try {
@@ -1446,10 +1447,11 @@
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
-                    return builder.build();
+                    dfd.resolve(builder.build());
                 } catch (ex) {
-                    console.log('error setting yearly tab', ex);
+                    dfd.reject(ex);
                 }
+                return dfd.promise();
             },
             _builder: function () {
                 function Builder(context) {

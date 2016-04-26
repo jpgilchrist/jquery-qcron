@@ -222,18 +222,22 @@
                             self.$hourlyTab.qcronHourlyTab("value", value).then(function (data) {
                                 console.log('hourly success', data);
                             }, function () {
-                                self.$weeklyTab.qcronWeeklyTab("value", value).then(function (data) {
-                                    console.log('weekly success', data);
+                                self.$dailyTab.qcronDailyTab("value", value).then(function(data) {
+                                    console.log('daily success', data);
                                 }, function () {
-                                    self.$monthlyTab.qcronMonthlyTab("value", value).then(function (data) {
-                                        console.log('monthly success', data);
+                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function (data) {
+                                        console.log('weekly success', data);
                                     }, function () {
-                                        self.$yearlyTab.qcronYearlyTab("value", value).then(function (data) {
-                                            console.log('yearly success', data);
+                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function (data) {
+                                            console.log('monthly success', data);
                                         }, function () {
-                                            console.log('error did not match any tabs formats');
+                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function (data) {
+                                                console.log('yearly success', data);
+                                            }, function () {
+                                                console.log('error did not match any tabs formats');
+                                            });
                                         });
-                                    });
+                                    }); 
                                 });
                             });
                         });

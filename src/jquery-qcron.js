@@ -167,7 +167,7 @@
                 allowOverride: true,
                 previewDates: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron",
-                defaultTab: "weekly"
+                defaultTab: "monthly"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -1139,8 +1139,9 @@
                     if (i > 0 && i < 32)
                         $(".qcron-dom-select", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
                     
-                    if (i > 0 && i < 12) {
-                        this.$monthIncrementSelect.append("<option value='" + i + "'>" + i + "</option>");
+                    if (i > 0 && i <= 12) {
+                        if (i < 12)
+                            this.$monthIncrementSelect.append("<option value='" + i + "'>" + i + "</option>");
                         this.$monthStartSelect.append("<option value='" + i + "'>" + i + "</option>");
                     }
                         
@@ -1266,44 +1267,68 @@
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set hours first');
-                        
-                        var p;
-                        if (selectedOption === "option-one") { 
-                            p = /^([0-9]|1[0-9]|2[0-9]|3[0-1])\/([1-9]|1[0-9]|2[0-9]|3[0-1])$/;
-                        } else if (selectedOption === "option-two") {
-                            console.log('match mo2');
-                        } else {
-                            throw new Error("Invalid monthly option selected");
-                        }
-                        
+                        var p = /^([1-9]|1[0-2])\/([1-9]|1[0-1])$/;
+                        var match = p.exec(month);
+                        if (match === null)
+                            throw new Error("for montly option one - month must be of the form {1-12}/{1-11}");
                         mo = month;
+                        
+                        ui.$monthStartSelect.val(match[1]);
+                        ui.$monthIncrementSelect.val(match[2]);
+                        
                         return this;
                     };
                     
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
-                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                            throw new Error("dom must be '*' or '?'");
-                        dom = dayOfMonth;
+                        
+                        var p;
+                        if (selectedOption == "option-one") {
+                            var daysInMonth = __months[mo.split("/")[0]].days;
+                            if (daysInMonth == 29) {
+                                p = /^([1-9]|[12]\d)$/;
+                            } else if (daysInMonth == 30) {
+                                p = /^([1-9]|[12]\d|30)$/;
+                            } else {
+                                p = /^([1-9]|[12]\d|3[01])$/;
+                            }
+
+                            var match = p.exec(dayOfMonth);
+                            if (match === null)
+                                throw new Error("invalid day of month for the month of " + __months[mo.split("/")[0]].display);
+                            dom = dayOfMonth;
+
+                            ui.$mo1DomStartSelect.val(dom);    
+                        } else if (selectedOption == "option-two") {
+                            p = /^[?]$/;
+                            if (p.exec(dayOfMonth) === null)
+                                throw new Error("day of month must be '?' since day of week is not '?'");
+                            dom = dayOfMonth;
+                        } else {
+                            throw new Error("invalid monthly option");
+                        }
                         return this;
                     };
 
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!dom)
                             throw new Error("must set day of month first");
-                        if (dom !== '?')
-                            if (dayOfWeek !== '?')
-                                throw new Error("dom is not '?', therefore dow must be '?'");
-
-                        if (dom === '?')
-                            if (dayOfWeek === '?')
-                                throw new Error("dom is '?', therefore dow must not be '?'");
-
-                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
-                            throw new Error("dow must either be '?' or '*'");
-
-                        dow = dayOfWeek;
+                        
+                        var p;
+                        if (selectedOption === "option-one") {
+                            p = /^[?]$/;
+                            if (p.exec(dayOfWeek) === null)
+                                throw new Error("day of week must be '?' since day of month is not '?'");
+                            dow = dayOfWeek;
+                        } else if (selectedOption === "option-two") {
+                            p = /^([1-7])#([1-4])$/;
+                            var match = p.exec(dayOfWeek);
+                            if (match === null)
+                                throw new Error('day of week must be of the form {1-7}#{1-4}');
+                        } else {
+                            throw new Error("invalid monthly option");
+                        }
                         return this;
                     };
 

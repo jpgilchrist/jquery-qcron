@@ -779,7 +779,7 @@
                 this.$element.append(this.$hourStartSelect);
                 this.$element.append("<span>:</span>");
                 this.$element.append(this.$minuteStartSelect);
-                this.$element.append("<span>on day</sapn>");
+                this.$element.append("<span>starting on day</sapn>");
                 this.$element.append(this.$dayStartSelect);
             },
             build: function (event, value) {
@@ -1122,20 +1122,16 @@
                 var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
                 $monthlyOptionOne.append("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>");
                 $monthlyOptionOne.append("<span>On day</san>");
-                $monthlyOptionOne.append("<select class='qcron-dom-select'></select>");
-                $monthlyOptionOne.append("<span>every</span>");
-                $monthlyOptionOne.append("<select class='qcron-month-increment'></select>");
-                $monthlyOptionOne.append("<span>month(s)");
+                this.$mo1DomStartSelect = $("<select class='qcron-dom-select'></select>").appendTo($monthlyOptionOne);
                 
                 var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>");
                 $monthlyOptionTwo.append("<input type='radio' name='qcron-monthly-option' value='option-two'/>");
                 $monthlyOptionTwo.append("<span>The</span>");
-                $monthlyOptionTwo.append("<select class='qcron-week-select'></select>");
-                $monthlyOptionTwo.append("<select class='qcron-dow-select'></select>");
-                $monthlyOptionTwo.append("<span>of every</span>");
-                $monthlyOptionTwo.append("<select class='qcron-month-increment'></select>");
-                $monthlyOptionTwo.append("<span>month(s)</span>");
+                this.$mo2WeekSelect = $("<select class='qcron-week-select'></select>").appendTo($monthlyOptionTwo);
+                this.$mo2DowSelect = $("<select class='qcron-dow-select'></select>").appendTo($monthlyOptionTwo);
                 
+                this.$monthIncrementSelect = $("<select class='qcron-month-increment'></select>");
+                this.$monthStartSelect = $("<select class='qcron-monthstart-select'></select>");
                 this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
                 this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
 
@@ -1144,8 +1140,8 @@
                         $(".qcron-dom-select", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
                     
                     if (i > 0 && i < 12) {
-                        $(".qcron-month-increment", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
-                        $(".qcron-month-increment", $monthlyOptionTwo).append("<option value='" + i + "'>" + i + "</option>");
+                        this.$monthIncrementSelect.append("<option value='" + i + "'>" + i + "</option>");
+                        this.$monthStartSelect.append("<option value='" + i + "'>" + i + "</option>");
                     }
                         
                     if (i < 24)
@@ -1163,6 +1159,10 @@
                 this.$element.empty();
                 this.$element.append($monthlyOptionOne);
                 this.$element.append($monthlyOptionTwo);
+                this.$element.append("<span>every</span>");
+                this.$element.append(this.$monthIncrementSelect);
+                this.$element.append("<span>month(s) starting on month</span>");
+                this.$element.append(this.$monthStartSelect);
                 this.$element.append("<span>at</span>");
                 this.$element.append(this.$hourStartSelect);
                 this.$element.append("<span>:</span>");
@@ -1175,24 +1175,26 @@
                     var selectedOption = this.$element.find("input[name='qcron-monthly-option']:checked").val(),
                         minuteStart = this.$minuteStartSelect.val(),
                         hourStart = this.$hourStartSelect.val(),
-                        monthIncr;
+                        monthIncr, monthStart;
                     if (selectedOption == "option-one") {
                         minuteStart = this.$minuteStartSelect.val();
                         hourStart   = this.$hourStartSelect.val();
-                        monthIncr   = this.$element.find(".qcron-monthly-option-one .qcron-month-increment").val();
+                        monthIncr   = this.$monthIncrementSelect.val();
+                        monthStart  = this.$monthStartSelect.val();
                         
                         var dom         = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
                             
-                        this.expression = "0 " + minuteStart + " " + hourStart + " " + dom + " 1/" + monthIncr + " ? *";    
+                        this.expression = "0 " + minuteStart + " " + hourStart + " " + dom + " " + monthStart + "/" + monthIncr + " ? *";    
                     } else {
                         minuteStart = this.$minuteStartSelect.val();
                         hourStart   = this.$hourStartSelect.val();
-                        monthIncr   = this.$element.find(".qcron-monthly-option-two .qcron-month-increment").val();
+                        monthIncr   = this.$monthIncrementSelect.val();
+                        monthStart  = this.$monthStartSelect.val();
                         
                         var weekNum     = this.$element.find(".qcron-monthly-option-two .qcron-week-select").val(),
                             dow         = this.$element.find(".qcron-monthly-option-two .qcron-dow-select").val();
                         
-                        this.expression = "0 " + minuteStart + " " + hourStart + " ? 1/" + monthIncr + " " + dow + "#" + weekNum + " *";
+                        this.expression = "0 " + minuteStart + " " + hourStart + " ? " + monthStart + "/" + monthIncr + " " + dow + "#" + weekNum + " *";
                     }
                     
                 }
@@ -1224,6 +1226,7 @@
             _builder: function () {
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
+                    var selectedOption = ui.$element.find("input[name='qcron-monthly-option']:checked").val();
 
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
@@ -1234,40 +1237,45 @@
 
                     this.minutes = function (minutes) {
                         if (!s)
-                            throw new Error("must set seconds first.");
-                        if (minutes === "*")
-                            minutes = "0/1";
-
-                        if (minutes.indexOf("/") === -1)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-
-                        var parts = minutes.split("/");
-                        if (parts.length !== 2)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-                        var m = parts[0],
-                            i = parts[1];
-                        if (m < 0 || m > 59)
-                            throw new Error("minutes should be within 0-59");
-                        if (i < 1 || i > 59)
-                            throw new Error("minutes increment should be within 1-59");
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be a number between 0 and 59.");
                         mi = minutes;
+
+                        ui.$minuteStartSelect.val(match[1]);
+
                         return this;
                     };
 
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
-                        if (hours !== "*")
-                            throw new Error("hours must be '*'");
+                        var p = /^([0-9]|1[0-9]|2[0-3])$/;
+                        var match = p.exec(hours);
+                        if (match === null)
+                            throw new Error("hours must be a number between 0 and 23");
                         h = hours;
+
+                        ui.$hourStartSelect.val(match[1]);
+
                         return this;
                     };
 
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set hours first');
-                        if (month !== "*")
-                            throw new Error("month must be '*'");
+                        
+                        var p;
+                        if (selectedOption === "option-one") { 
+                            p = /^([0-9]|1[0-9]|2[0-9]|3[0-1])\/([1-9]|1[0-9]|2[0-9]|3[0-1])$/;
+                        } else if (selectedOption === "option-two") {
+                            console.log('match mo2');
+                        } else {
+                            throw new Error("Invalid monthly option selected");
+                        }
+                        
                         mo = month;
                         return this;
                     };

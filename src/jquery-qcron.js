@@ -167,7 +167,7 @@
                 allowOverride: true,
                 previewDates: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron",
-                defaultTab: "hourly"
+                defaultTab: "weekly"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -196,6 +196,7 @@
                                     self.$element.find(".qcron-raw-input").val(data.expression);  
                                 },
                                 error: function (error) {
+                                    //TODO: if it's a bad url, cache it and don't send ajax calls anymore...
                                     console.log('error', error);
                                 }
                             });
@@ -462,8 +463,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -510,20 +511,10 @@
                         h = hours;
                         return this;
                     };
-
-                    this.dayOfMonth = function (dayOfMonth) {
-                        if (!h)
-                            throw new Error("must set hours first");
-                        var p = /^[*?]$/;
-                        if (p.exec(dayOfMonth) === null)
-                            throw new Error("day of month must be '*' or '?'");
-                        dom = dayOfMonth;
-                        return this;
-                    };
-
+                    
                     this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
+                        if (!h)
+                            throw new Error('must set hours first');
                         var p = /^[*]$/;
                         if (p.exec(month) === null)
                             throw new Error("month must be '*'");
@@ -531,9 +522,19 @@
                         return this;
                     };
 
-                    this.dayOfWeek = function (dayOfWeek) {
+                    this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
+                        var p = /^[*?]$/;
+                        if (p.exec(dayOfMonth) === null)
+                            throw new Error("day of month must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         var p = /^[*?]$/;
                         if (p.exec(dayOfWeek) === null)
                             throw new Error("day of week must be '*' or '?'");
@@ -629,8 +630,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -676,9 +677,19 @@
                         return this;
                     };
 
-                    this.dayOfMonth = function (dayOfMonth) {
+                    this.month = function (month) {
                         if (!h)
-                            throw new Error("must set hours first");
+                            throw new Error('must set hours first');
+                        var p = /^[*]$/;
+                        if (p.exec(month) === null)
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+                    
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!mo)
+                            throw new Error("must set month first");
                         var p = /^[*?]$/;
                         if (p.exec(dayOfMonth) === null)
                             throw new Error("day of month must be '*' or '?'");
@@ -686,19 +697,9 @@
                         return this;
                     };
 
-                    this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
-                        var p = /^[*]$/;
-                        if (p.exec(month) === null)
-                            throw new Error("month must be '*'");
-                        mo = month;
-                        return this;
-                    };
-
                     this.dayOfWeek = function (dayOfWeek) {
-                        if (!mo)
-                            throw new Error("must set month first");
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         var p = /^[*?]$/;
                         if (p.exec(dayOfWeek) === null)
                             throw new Error("day of week must be '*' or '?'");
@@ -800,8 +801,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -850,9 +851,19 @@
                         return this;
                     };
 
-                    this.dayOfMonth = function (dayOfMonth) {
+                    this.month = function (month) {
                         if (!h)
-                            throw new Error("must set hours first");
+                            throw new Error('must set hours first');
+                        var p = /^[*]$/;
+                        if (p.exec(month) === null)
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+                    
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!mo)
+                            throw new Error("must set month first");
                         var p = /^([1-9]|1[0-9]|2[0-9]|3[0-1])\/([1-9]|1[0-9]|2[0-9]|3[0-1])$/;
                         var match = p.exec(dayOfMonth);
                         if (match === null)
@@ -865,19 +876,9 @@
                         return this;
                     };
 
-                    this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
-                        var p = /^[*]$/;
-                        if (p.exec(month) === null)
-                            throw new Error("month must be '*'");
-                        mo = month;
-                        return this;
-                    };
-
                     this.dayOfWeek = function (dayOfWeek) {
-                        if (!mo)
-                            throw new Error("must set month first");
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         var p = /^[?]$/;
                         if (p.exec(dayOfWeek) === null)
                             throw new Error("day of week must be '?'");
@@ -980,8 +981,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -1077,28 +1078,28 @@
                         h = hours;
                         return this;
                     };
-
-                    this.dayOfMonth = function (dayOfMonth) {
-                        if (!h)
-                            throw new Error("must set hours first");
-                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                            throw new Error("dom must be '*' or '?'");
-                        dom = dayOfMonth;
-                        return this;
-                    };
-
+                    
                     this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
+                        if (!h)
+                            throw new Error('must set hours first');
                         if (month !== "*")
                             throw new Error("month must be '*'");
                         mo = month;
                         return this;
                     };
 
-                    this.dayOfWeek = function (dayOfWeek) {
+                    this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         if (dom !== '?')
                             if (dayOfWeek !== '?')
                                 throw new Error("dom is not '?', therefore dow must be '?'");
@@ -1250,8 +1251,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -1302,27 +1303,27 @@
                         return this;
                     };
 
-                    this.dayOfMonth = function (dayOfMonth) {
+                    this.month = function (month) {
                         if (!h)
-                            throw new Error("must set hours first");
+                            throw new Error('must set hours first');
+                        if (month !== "*")
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+                    
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!mo)
+                            throw new Error("must set month first");
                         if (dayOfMonth !== "*" && dayOfMonth !== "?")
                             throw new Error("dom must be '*' or '?'");
                         dom = dayOfMonth;
                         return this;
                     };
 
-                    this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
-                        if (month !== "*")
-                            throw new Error("month must be '*'");
-                        mo = month;
-                        return this;
-                    };
-
                     this.dayOfWeek = function (dayOfWeek) {
-                        if (!mo)
-                            throw new Error("must set month first");
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         if (dom !== '?')
                             if (dayOfWeek !== '?')
                                 throw new Error("dom is not '?', therefore dow must be '?'");
@@ -1481,8 +1482,8 @@
                     builder.seconds(parts[0])
                         .minutes(parts[1])
                         .hours(parts[2])
-                        .dayOfMonth(parts[3])
                         .month(parts[4])
+                        .dayOfMonth(parts[3])
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
@@ -1532,28 +1533,28 @@
                         h = hours;
                         return this;
                     };
-
-                    this.dayOfMonth = function (dayOfMonth) {
-                        if (!h)
-                            throw new Error("must set hours first");
-                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                            throw new Error("dom must be '*' or '?'");
-                        dom = dayOfMonth;
-                        return this;
-                    };
-
+                    
                     this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
+                        if (!h)
+                            throw new Error('must set hours first');
                         if (month !== "*")
                             throw new Error("month must be '*'");
                         mo = month;
                         return this;
                     };
 
-                    this.dayOfWeek = function (dayOfWeek) {
+                    this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
+                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
+                            throw new Error("dom must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!dom)
+                            throw new Error("must set day of month first");
                         if (dom !== '?')
                             if (dayOfWeek !== '?')
                                 throw new Error("dom is not '?', therefore dow must be '?'");

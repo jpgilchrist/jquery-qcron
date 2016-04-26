@@ -972,9 +972,9 @@
                     this.options.changed.call(this, this.expression);
             },
             value: function (value) {
+                var dfd = $.Deferred();
                 if (!value)
-                    return this.expression;
-
+                    dfd.resolve(this.expression);
                 var parts = value.split(/\s+/);
                 var builder = this._builder();
                 try {
@@ -986,56 +986,11 @@
                         .dayOfWeek(parts[5]);
                     if (!!parts[6])
                         builder.year(parts[6]);
-                    return builder.build();
+                    dfd.resolve(builder.build());
                 } catch (ex) {
-                    console.log('error setting weekly tab', ex);
+                    dfd.reject(ex);
                 }
-
-                //if (!value)
-                //    return this.expression;
-                //
-                //var parts = value.trim().split(/\s+/);
-                //if (parts[0] !== "0") // seconds
-                //    return {error: "invalid seconds. must be '0'"};
-                //if (parts[3] !== "?")
-                //    return {error: "invalid dom. must be '?' when specifiying a day of week."};
-                //if (parts[4] !== "*") // month
-                //    return {error: "invalid month. must be '*'"};
-                //if (!!parts[6] && parts[6] !== "*") // year
-                //    return {error: "invalid year. must be '*' or unspecified."};
-                //
-                //var minutes = Number(parts[1]);
-                //if (isNaN(minutes))
-                //    return {error: "invalid minutes. must be an integer."};
-                //
-                //if (minutes < 0 || minutes > 59)
-                //    return {error: "invalid minutes. allowed values are 0 to 59."};
-                //
-                //var hours = Number(parts[2]);
-                //if (isNaN(hours))
-                //    return {error: "invalid hours. must be an integer."};
-                //
-                //if (hours < 0 || hours > 59)
-                //    return {error: "invalid hours. allowed values are 0 to 59."};
-                //
-                //var dow = parts[5];
-                //if (dow === "*")
-                //    dow = "1,2,3,4,5,6,7";
-                //
-                //var dowParts = dow.split(",");
-                //for (var i = 0; i < dowParts.length; i++) {
-                //    var d = Number(dowParts[i]);
-                //    if (isNaN(d))
-                //        return {error: "invalid day of week. currently, only numeric values are supported."};
-                //    if (d < 1 || d > 7)
-                //        return {error: "invalid day of week. allowed values are 1 to 7."};
-                //    this.$element.find(".qcron-dow-input[value='" + d + "']").attr('checked', true);
-                //}
-                //
-                //this.$element.find(".qcron-minutestart-select").val(minutes);
-                //this.$element.find(".qcron-hourstart-select").val(hours);
-                //
-                //return true;
+                return dfd.promise();
             },
             _builder: function () {
                 function Builder(context) {
@@ -1050,39 +1005,37 @@
 
                     this.minutes = function (minutes) {
                         if (!s)
-                            throw new Error("must set seconds first.");
-                        if (minutes === "*")
-                            minutes = "0/1";
-
-                        if (minutes.indexOf("/") === -1)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-
-                        var parts = minutes.split("/");
-                        if (parts.length !== 2)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-                        var m = parts[0],
-                            i = parts[1];
-                        if (m < 0 || m > 59)
-                            throw new Error("minutes should be within 0-59");
-                        if (i < 1 || i > 59)
-                            throw new Error("minutes increment should be within 1-59");
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be a number between 0 and 59.");
                         mi = minutes;
+
+                        ui.$minuteStartSelect.val(match[1]);
+
                         return this;
                     };
 
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
-                        if (hours !== "*")
-                            throw new Error("hours must be '*'");
+                        var p = /^([0-9]|1[0-9]|2[0-3])$/;
+                        var match = p.exec(hours);
+                        if (match === null)
+                            throw new Error("hours must be a number between 0 and 23");
                         h = hours;
+
+                        ui.$hourStartSelect.val(match[1]);
+
                         return this;
                     };
                     
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set hours first');
-                        if (month !== "*")
+                        var p = /^[*]$/;
+                        if (p.exec(month) === null)
                             throw new Error("month must be '*'");
                         mo = month;
                         return this;
@@ -1091,8 +1044,9 @@
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
-                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                            throw new Error("dom must be '*' or '?'");
+                        var p = /^[*]$/;
+                        if (p.exec(dayOfMonth) === null)
+                            throw new Error("day of month must be '*'");
                         dom = dayOfMonth;
                         return this;
                     };
@@ -1100,18 +1054,23 @@
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!dom)
                             throw new Error("must set day of month first");
-                        if (dom !== '?')
-                            if (dayOfWeek !== '?')
-                                throw new Error("dom is not '?', therefore dow must be '?'");
-
-                        if (dom === '?')
-                            if (dayOfWeek === '?')
-                                throw new Error("dom is '?', therefore dow must not be '?'");
-
-                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
-                            throw new Error("dow must either be '?' or '*'");
-
-                        dow = dayOfWeek;
+                        var p = /^[1-7](?:,[1-7])*$/;
+                        if (p.exec(dayOfWeek) === null)
+                            throw new Error("day of week must be a comma seperated list of days [1-7] and must specifiy at least one day.");
+                        var days = dayOfWeek.split(","),
+                            processedCache = {},
+                            processedDays  = [];
+                        
+                        for (var i = 0; i < days.length; i++) {
+                            if (!!processedCache[days[i]])
+                                continue;
+                            processedCache[days[i]] = true;
+                            processedDays.push(days[i]);
+                            
+                            ui.$dayOfWeekCheckboxes.find(".qcron-dow-input[value='" + days[i] + "']").attr('checked', true);
+                        }
+                        
+                        dow = processedDays.joing(",");
                         return this;
                     };
 

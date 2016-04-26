@@ -247,6 +247,10 @@
                 this.$element = $(this.element);
                 this.$element.empty();
                 
+                this.$element.addClass("has-jqcron");
+                if (!!this.options.width)
+                    this.$element.css("width", this.options.width);
+                
                 this.$qcronControls = $(this.__controlsTemplate);
                 this.$element.append(this.$qcronControls);
                 

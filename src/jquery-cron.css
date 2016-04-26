@@ -98,3 +98,7 @@
 .qcron-controls div {
     margin: 10px 0;
 }
+
+.has-jqcron {
+    width: 585px;
+}

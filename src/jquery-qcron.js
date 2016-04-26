@@ -167,7 +167,7 @@
                 allowOverride: true,
                 previewDates: true,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron",
-                defaultTab: "monthly"
+                defaultTab: "yearly"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -1231,7 +1231,6 @@
             _builder: function () {
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
-                    var selectedOption = ui.$element.find("input[name='qcron-monthly-option']:checked").val();
 
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
@@ -1371,18 +1370,18 @@
             },
             _init: function () {
                 var $yearlyOptionOne = $("<div class='qcron-yearly-option-one'></div>");
-                $yearlyOptionOne.append("<input type='radio' name='qcron-yearly-option' value='option-one' checked/>");
+                this.$yearlyOptionOneRadio = $("<input type='radio' name='qcron-yearly-option' value='option-one' checked/>").appendTo($yearlyOptionOne);
                 $yearlyOptionOne.append("<span>Every</san>");
-                var $monthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionOne);
-                $yearlyOptionOne.append("<select class='qcron-dom-select'></select>");
+                this.$yearlyOptionOneMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionOne);
+                this.$yearlyOptionOneDomSelect = $("<select class='qcron-dom-select'></select>").appendTo($yearlyOptionOne);
 
                 var $yearlyOptionTwo = $("<div class='qcron-yearly-option-two'></div>");
-                $yearlyOptionTwo.append("<input type='radio' name='qcron-yearly-option' value='option-two'/>");
+                this.$yearlyOptionTwoRadio = $("<input type='radio' name='qcron-yearly-option' value='option-two'/>").appendTo($yearlyOptionTwo);
                 $yearlyOptionTwo.append("<span>The</span>");
-                $yearlyOptionTwo.append("<select class='qcron-week-select'></select>");
-                $yearlyOptionTwo.append("<select class='qcron-dow-select'></select>");
+                this.$yearlyOptionTwoWeekSelect = $("<select class='qcron-week-select'></select>").appendTo($yearlyOptionTwo);
+                this.$yearlyOptionTwoDowSelect = $("<select class='qcron-dow-select'></select>").appendTo($yearlyOptionTwo);
                 $yearlyOptionTwo.append("<span>of</span>");
-                $yearlyOptionTwo.append("<select class='qcron-month-select'></select>");
+                this.$yearlyOptionTwoMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionTwo);
 
                 this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
                 this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
@@ -1393,28 +1392,28 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                var self = this;
                 $.each(__months, function (key, month) {
-                    $(".qcron-month-select", $yearlyOptionOne).append("<option value='" + key + "'>" + month.display + "</option>");
-                    $(".qcron-month-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + month.display + "</option>");
+                    self.$yearlyOptionOneMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
+                    self.$yearlyOptionTwoMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
                 });
                 
                 $.each(__weeks, function (key, week) {
-                    $(".qcron-week-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + week.display + "</option>"); 
+                    self.$yearlyOptionTwoWeekSelect.append("<option value='" + key + "'>" + week.display + "</option>"); 
                 });
                 
                 $.each(__weekdays, function (key, weekday) {
-                    $(".qcron-dow-select", $yearlyOptionTwo).append("<option value='" + key + "'>" + weekday.display + "</option>");
+                    self.$yearlyOptionTwoDowSelect.append("<option value='" + key + "'>" + weekday.display + "</option>");
                 });
                 
-                $monthSelect.on('change', function (event) {
-                    var month = __months[$(this).val()],
-                        $monthSelect = $yearlyOptionOne.find(".qcron-dom-select");
-                    $monthSelect.empty();
+                this.$yearlyOptionOneMonthSelect.on('change', function () {
+                    var month = __months[$(this).val()];
+                    self.$yearlyOptionOneDomSelect.empty();
                     for (var i = 1; i <= month.days; i++) {
-                        $monthSelect.append("<option value='" + i + "'>" + i + "</option>");
+                        self.$yearlyOptionOneDomSelect.append("<option value='" + i + "'>" + i + "</option>");
                     }
                 });
-                $monthSelect.trigger('change');
+                this.$yearlyOptionOneMonthSelect.trigger('change');
                 
 
                 this.$element.empty();
@@ -1492,68 +1491,84 @@
 
                     this.minutes = function (minutes) {
                         if (!s)
-                            throw new Error("must set seconds first.");
-                        if (minutes === "*")
-                            minutes = "0/1";
-
-                        if (minutes.indexOf("/") === -1)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-
-                        var parts = minutes.split("/");
-                        if (parts.length !== 2)
-                            throw new Error("minutes should be in the form {start}/{increment}");
-                        var m = parts[0],
-                            i = parts[1];
-                        if (m < 0 || m > 59)
-                            throw new Error("minutes should be within 0-59");
-                        if (i < 1 || i > 59)
-                            throw new Error("minutes increment should be within 1-59");
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be a number between 0 and 59.");
                         mi = minutes;
+
+                        ui.$minuteStartSelect.val(match[1]);
+
                         return this;
                     };
 
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
-                        if (hours !== "*")
-                            throw new Error("hours must be '*'");
+                        var p = /^([0-9]|1[0-9]|2[0-3])$/;
+                        var match = p.exec(hours);
+                        if (match === null)
+                            throw new Error("hours must be a number between 0 and 23");
                         h = hours;
+
+                        ui.$hourStartSelect.val(match[1]);
+
                         return this;
                     };
                     
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set hours first');
-                        if (month !== "*")
-                            throw new Error("month must be '*'");
+                        var p = /^[1-9]|1[0-2]$/;
+                        var match = p.exec(month);
+                        if (match === null)
+                            throw new Error("months must be between 1 and 12");
                         mo = month;
+                        
+                        ui.$yearlyOptionOneMonthSelect.val(mo);
                         return this;
                     };
 
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!mo)
                             throw new Error("must set month first");
-                        if (dayOfMonth !== "*" && dayOfMonth !== "?")
-                            throw new Error("dom must be '*' or '?'");
+
+                        var p = /^([1-9]|[12]\d|3[01])|([?])$/;
+                        var match = p.exec(dayOfMonth);
+                        if (match === null)
+                            throw new Error("invalid day of month should be of the form {1-31}");
+
                         dom = dayOfMonth;
+
+                        ui.$yearlyOptionOneRadio.attr('checked', !!match[1]);
+                        ui.$yearlyOptionTwoRadio.attr('checked', !match[1]);
+                        if (!!match[1])
+                            ui.$yearlyOptionOneDomSelect.val(dom);
+
                         return this;
                     };
 
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!dom)
                             throw new Error("must set day of month first");
-                        if (dom !== '?')
-                            if (dayOfWeek !== '?')
-                                throw new Error("dom is not '?', therefore dow must be '?'");
 
-                        if (dom === '?')
-                            if (dayOfWeek === '?')
-                                throw new Error("dom is '?', therefore dow must not be '?'");
-
-                        if (dayOfWeek !== '?' && dayOfWeek !== '*')
-                            throw new Error("dow must either be '?' or '*'");
+                        var p = /^([1-7])#([1-4])|([?])$/;
+                        var match = p.exec(dayOfWeek);
+                        if (match ===  null)
+                            throw new Error("Invalid day of week should of the form {1-7}#{1-4} or '?'");
+                        if (match[3] && dom === "?")
+                            throw new Error("Invalid day of week day. Day of month is not defined, therefore day of week must be.");
+                        if (!match[3] && dom !== "?")
+                            throw new Error("Invalid day of week. Day of months is already defined, therefore day of week cannot be.");
 
                         dow = dayOfWeek;
+
+                        if (!match[3]) {
+                            ui.$yearlyOptionTwoWeekSelect.val(match[2]);
+                            ui.$yearlyOptionTwoDowSelect.val(match[1]);
+                        }
+
                         return this;
                     };
 

@@ -164,8 +164,8 @@
                 week: true,
                 month: true,
                 year: true,
-                allowOverride: true,
-                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                allowOverride: null,
+                validateUrl: null,
                 defaultTab: "daily"
             },
             

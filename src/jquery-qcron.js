@@ -149,38 +149,12 @@
             _create: function (options) {
                 $.extend(this.options, options);
                 
-                this._on(this.element, {
-                    "qcron:expression": function (event, exp) {                        
-                        this.expression = exp;
-                        
-                        var self = this;
-                        if (!!self.options.validateUrl)
-                            $.ajax({
-                                url: self.options.validateUrl,
-                                type: "GET", 
-                                dataType: 'json',
-                                data: {
-                                    expression: self.expression,
-                                    count: 20
-                                },
-                                success: function (data) {
-                                    console.log('success', data);
-                                },
-                                error: function (error) {
-                                    console.error('failed to validate expression', error);
-                                }
-                            });
-                    },
-                    "click .qcron-raw-validate": function () {
-                        this.value(this.$element.find(".qcron-raw-input").val());
-                    }
-                });
+                this._on(this.element, {});
             },
             
             value: function (value) {
                 var dfd = $.Deferred();
                 var self = this;
-                debugger;
                 if (!!value) {
                     value = value.trim();
                     var parts = value.split(/\s+/);
@@ -244,11 +218,9 @@
                                     count: 20
                                 },
                                 success: function (data) {
-                                    console.log('success', data);
                                     dfd.resolve(data.expression);
                                 },
                                 error: function (error) {
-                                    console.error('failed to validate expression', error);
                                     dfd.reject(error);
                                 }
                             });
@@ -334,91 +306,56 @@
             __minutesTabItemTemplate: "<li><a href='#qcron-minutes-tab'>Minutes</a></li>",
             __minutesTabBodyTemplate: "<div id='qcron-minutes-tab'></div>",
             _renderMinutesTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__minutesTabItemTemplate));
-                this.$minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab();
                 this.$qcronControls.append(this.$minutesTab);
             },
 
             __hourlyTabItemTemplate: "<li><a href='#qcron-hourly-tab'>Hourly</a></li>",
             __hourlyTabBodyTemplate: "<div id='qcron-hourly-tab'></div>",
             _renderHourlyTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__hourlyTabItemTemplate));
-                this.$hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab();
                 this.$qcronControls.append(this.$hourlyTab);
             },
 
             __dailyTabItemTemplate: "<li><a href='#qcron-daily-tab'>Daily</a></li>",
             __dailyTabBodyTemplate: "<div id='qcron-daily-tab'></div>",
             _renderDailyTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__dailyTabItemTemplate));
-                this.$dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab();
                 this.$qcronControls.append(this.$dailyTab);
             },
 
             __weeklyTabItemTemplate: "<li><a href='#qcron-weekly-tab'>Weekly</a></li>",
             __weeklyTabBodyTemplate: "<div id='qcron-weekly-tab'></div>",
             _renderWeeklyTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__weeklyTabItemTemplate));
-                this.$weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab();
                 this.$qcronControls.append(this.$weeklyTab);
             },
 
             __monthlyTabItemTemplate: "<li><a href='#qcron-monthly-tab'>Monthly</a></li>",
             __monthlyTabBodyTemplate: "<div id='qcron-monthly-tab'></div>",
             _renderMonthlyTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__monthlyTabItemTemplate));
-                this.$monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab();
                 this.$qcronControls.append(this.$monthlyTab);
             },
 
             __yearlyTabItemTemplate: "<li><a href='#qcron-yearly-tab'>Yearly</a></li>",
             __yearlyTabBodyTemplate: "<div id='qcron-yearly-tab'></div>",
             _renderYearlyTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__yearlyTabItemTemplate));
-                this.$yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab();
                 this.$qcronControls.append(this.$yearlyTab);
             },
             
             __customTabItemTemplate: "<li><a href='#qcron-custom-tab'>Custom</a></li>",
             __customTabBodyTemplate: "<div id='qcron-custom-tab'></div>",
             _renderCustomTab: function () {
-                var self = this;
                 this.$qcronControls.find("ul").append($(this.__customTabItemTemplate));
-                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab({
-                    changed: function (exp) {
-                        self._trigger(':expression', null, [exp]);
-                    }
-                });
+                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab();
                 this.$qcronControls.append(this.$customTab);
             }
         });

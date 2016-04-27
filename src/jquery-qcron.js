@@ -137,7 +137,8 @@
                 week: true,
                 month: true,
                 year: true,
-                allowOverride: true,
+                custom: true,
+                allowUserOverride: false,
                 validateUrl: "http://localhost/veoci/api-v1/p/cron",
                 defaultTab: "daily"
             },
@@ -146,9 +147,7 @@
             __rawInputTemplate: "<div class='qcron-raw'></div>",
             __previewTemplate : "<div class='qcron-preview'></div>",
             
-            _create: function (options) {
-                $.extend(this.options, options);
-                
+            _create: function () {
                 this._on(this.element, {});
             },
             
@@ -190,13 +189,18 @@
                                                 dfd.resolve(expr);
                                             }, function (error) {
                                                 errors.push(error);
-                                                self.$customTab.qcronCustomTab("value", value).then(function (expr) {
-                                                    self.$qcronControls.tabs("option", "active", 6);
-                                                    dfd.resolve(expr);
-                                                }, function (error) {
-                                                    errors.push(error);
+                                                if (!!self.options.custom) {
+                                                    self.$customTab.qcronCustomTab("value", value).then(function (expr) {
+                                                        self.$qcronControls.tabs("option", "active", 6);
+                                                        dfd.resolve(expr);
+                                                    }, function (error) {
+                                                        errors.push(error);
+                                                        dfd.reject(errors);
+                                                    });    
+                                                } else {
+                                                    errors.push('value is not supported by the ui and custom tab is not enabled');
                                                     dfd.reject(errors);
-                                                });
+                                                }
                                             });
                                         });
                                     }); 
@@ -288,7 +292,8 @@
                     this._renderMonthlyTab();
                 if (!!this.options.year)
                     this._renderYearlyTab();
-                this._renderCustomTab();
+                if (!!this.options.custom)
+                    this._renderCustomTab();
                 
                 var option = this.options.defaultTab;
                 var active = 
@@ -355,7 +360,9 @@
             __customTabBodyTemplate: "<div id='qcron-custom-tab'></div>",
             _renderCustomTab: function () {
                 this.$qcronControls.find("ul").append($(this.__customTabItemTemplate));
-                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab();
+                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab({
+                    inputEnabled: this.options.allowUserOverride
+                });
                 this.$qcronControls.append(this.$customTab);
             }
         });
@@ -363,9 +370,7 @@
         
         $.widget("jpgilchrist.qcronMinutesTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);
-                
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -513,9 +518,7 @@
         
         $.widget("jpgilchrist.qcronHourlyTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);  
-                
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -664,9 +667,7 @@
         
         $.widget("jpgilchrist.qcronDailyTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);  
-                
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -824,9 +825,7 @@
         
         $.widget("jpgilchrist.qcronWeeklyTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);  
-
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -994,9 +993,7 @@
         
         $.widget("jpgilchrist.qcronMonthlyTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);  
-                
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -1223,9 +1220,7 @@
         
         $.widget("jpgilchrist.qcronYearlyTab", {
             options: {},
-            _create: function (options) {
-                $.extend(this.options, options);  
-                
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
@@ -1452,15 +1447,14 @@
         
         $.widget("jpgilchrist.qcronCustomTab", {
             options: {
-                enabled: false
+                inputEnabled: true
             },
-            _create: function (options) {
-                $.extend(this.options, options);  
-
+            _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
                 this.$input = $("<input type='text' class='qcron-raw-input'/>").appendTo(this.$element);
+                this.$input.prop('disabled', this.options.inputEnabled);
             },
             build: function () {                
                 return !!this.$input.val() ? this.$input.val().trim() : null;

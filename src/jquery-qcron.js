@@ -165,9 +165,8 @@
                 month: true,
                 year: true,
                 allowOverride: true,
-                previewDates: true,
-                validateUrl: null,
-                defaultTab: "yearly"
+                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                defaultTab: "daily"
             },
             
             __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
@@ -182,27 +181,22 @@
                         this.expression = exp;
                         
                         var self = this;
-                        if (!!this.options.validateUrl) {
-                            $.ajax({
-                                url: this.options.validateUrl,
-                                type: "POST", 
-                                dataType: 'json',
-                                contentType: 'application/json',
-                                data: JSON.stringify({
-                                    expression: exp
-                                }),
-                                success: function (data) {
-                                    console.log('success', data);
-                                    self.$element.find(".qcron-raw-input").val(data.expression);  
-                                },
-                                error: function (error) {
-                                    //TODO: if it's a bad url, cache it and don't send ajax calls anymore...
-                                    console.log('error', error);
-                                }
-                            });
-                        } else {
-                            self.$element.find(".qcron-raw-input").val(this.expression);  
-                        }
+                        $.ajax({
+                            url: self.options.validateUrl,
+                            type: "POST", 
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            position: {},
+                            data: JSON.stringify({
+                                expression: self.expression
+                            }),
+                            success: function (data) {
+                                console.log('success', data);
+                            },
+                            error: function (error) {
+                                console.error('failed to validate expression', error);
+                            }
+                        });
                     },
                     "click .qcron-raw-validate": function () {
                         this.value(this.$element.find(".qcron-raw-input").val());
@@ -216,23 +210,23 @@
                     var parts = value.split(/\s+/);
                     if (parts.length === 6 || parts.length === 7) {
                         var self = this;
-                        self.$minutesTab.qcronMinutesTab("value", value).then(function (data) {
-                            console.log('minutes success', data);
+                        self.$minutesTab.qcronMinutesTab("value", value).then(function () {
+                            self.$qcronControls.tabs("option", "active", 0);
                         }, function () {
-                            self.$hourlyTab.qcronHourlyTab("value", value).then(function (data) {
-                                console.log('hourly success', data);
+                            self.$hourlyTab.qcronHourlyTab("value", value).then(function () {
+                                self.$qcronControls.tabs("option", "active", 1);
                             }, function () {
-                                self.$dailyTab.qcronDailyTab("value", value).then(function(data) {
-                                    console.log('daily success', data);
+                                self.$dailyTab.qcronDailyTab("value", value).then(function() {
+                                    self.$qcronControls.tabs("option", "active", 2);
                                 }, function () {
-                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function (data) {
-                                        console.log('weekly success', data);
+                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function () {
+                                        self.$qcronControls.tabs("option", "active", 3);
                                     }, function () {
-                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function (data) {
-                                            console.log('monthly success', data);
+                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function () {
+                                            self.$qcronControls.tabs("option", "active", 4);
                                         }, function () {
-                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function (data) {
-                                                console.log('yearly success', data);
+                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function () {
+                                                self.$qcronControls.tabs("option", "active", 5);
                                             }, function () {
                                                 console.log('error did not match any tabs formats');
                                             });
@@ -253,25 +247,12 @@
                 this.$element = $(this.element);
                 this.$element.empty();
                 
-                this.$element.addClass("has-jqcron");
+                this.$element.addClass("has-qcron");
                 if (!!this.options.width)
                     this.$element.css("width", this.options.width);
                 
                 this.$qcronControls = $(this.__controlsTemplate);
                 this.$element.append(this.$qcronControls);
-                
-                this.$rawInput = $(this.__rawInputTemplate).appendTo(this.$element);
-                if (!!this.options.allowOverride) {
-                    this.$rawInput.append("<input type='text' class='qcron-raw-input'/>");
-                    this.$rawInput.append("<button class='qcron-raw-validate'>Validate</button>");
-                } else {
-                    this.$rawInput.append("<input type='text' class='qcron-raw-input' disabled/>");
-                }
-                
-                if (!!this.options.validateUrl && this.options.previewDates) {
-                    this.$qcronPreview = $(this.__previewTemplate);
-                    this.$element.append(this.$qcronPreview);
-                }
                 
                 this._renderInputs();
             },
@@ -330,11 +311,6 @@
                         buildTab(ui.newPanel);
                     }
                 });
-            },
-            
-            _renderPreview: function () {
-                var expression = !!this.expression ? this.expression : this.options.initial;
-                this.$qcronPreview.html("<span>" + expression + "</span>");
             },
             
             __minutesTabItemTemplate: "<li><a href='#qcron-minutes-tab'>Minutes</a></li>",

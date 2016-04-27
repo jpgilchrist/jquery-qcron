@@ -99,6 +99,15 @@
     margin: 10px 0;
 }
 
-.has-jqcron {
-    width: 585px;
+.has-qcron {
+    position: relative;
+}
+
+.jqcron-preview-dates {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
 }

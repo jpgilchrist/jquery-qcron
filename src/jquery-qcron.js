@@ -1306,22 +1306,24 @@
             },
             value: function (value) {
                 var dfd = $.Deferred();
-                if (!value)
+                if (!value) {
                     dfd.resolve(this.build());
-                var parts = value.split(/\s+/);
-                var builder = this._builder();
-                try {
-                    builder.seconds(parts[0])
-                        .minutes(parts[1])
-                        .hours(parts[2])
-                        .month(parts[4])
-                        .dayOfMonth(parts[3])
-                        .dayOfWeek(parts[5]);
-                    if (!!parts[6])
-                        builder.year(parts[6]);
-                    dfd.resolve(builder.build());
-                } catch (ex) {
-                    dfd.reject(ex);
+                } else {
+                    var parts = value.split(/\s+/);
+                    var builder = this._builder();
+                    try {
+                        builder.seconds(parts[0])
+                            .minutes(parts[1])
+                            .hours(parts[2])
+                            .month(parts[4])
+                            .dayOfMonth(parts[3])
+                            .dayOfWeek(parts[5]);
+                        if (!!parts[6])
+                            builder.year(parts[6]);
+                        dfd.resolve(builder.build());
+                    } catch (ex) {
+                        dfd.reject(ex);
+                    }   
                 }
                 return dfd.promise();
             },

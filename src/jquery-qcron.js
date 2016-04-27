@@ -65,33 +65,6 @@
             }
         };
         
-        var __periods = {
-            1: {
-                display: "minute",
-                value: 1
-            },
-            2: {
-                display: "hour",
-                value: 2
-            },
-            3: {
-                display: "day",
-                value: 3
-            },
-            4: {
-                display: "week",
-                value: 4
-            },
-            5: {
-                display: "month",
-                value: 5
-            },
-            6: {
-                display: "year",
-                value: 6
-            }
-        };
-        
         var __months = {
             1: {
                 display: "January",
@@ -164,8 +137,8 @@
                 week: true,
                 month: true,
                 year: true,
-                allowOverride: true,
-                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                allowOverride: false,
+                validateUrl: null,
                 defaultTab: "daily"
             },
             
@@ -181,22 +154,23 @@
                         this.expression = exp;
                         
                         var self = this;
-                        $.ajax({
-                            url: self.options.validateUrl,
-                            type: "POST", 
-                            dataType: 'json',
-                            contentType: 'application/json',
-                            position: {},
-                            data: JSON.stringify({
-                                expression: self.expression
-                            }),
-                            success: function (data) {
-                                console.log('success', data);
-                            },
-                            error: function (error) {
-                                console.error('failed to validate expression', error);
-                            }
-                        });
+                        if (!!self.options.validateUrl)
+                            $.ajax({
+                                url: self.options.validateUrl,
+                                type: "POST", 
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                position: {},
+                                data: JSON.stringify({
+                                    expression: self.expression
+                                }),
+                                success: function (data) {
+                                    console.log('success', data);
+                                },
+                                error: function (error) {
+                                    console.error('failed to validate expression', error);
+                                }
+                            });
                     },
                     "click .qcron-raw-validate": function () {
                         this.value(this.$element.find(".qcron-raw-input").val());

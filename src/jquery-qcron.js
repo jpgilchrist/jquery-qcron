@@ -179,30 +179,44 @@
             },
             
             value: function (value) {
-                value = value.trim();
+                var dfd = $.Deferred();
                 if (!!value) {
+                    value = value.trim();
                     var parts = value.split(/\s+/);
                     if (parts.length === 6 || parts.length === 7) {
                         var self = this;
-                        self.$minutesTab.qcronMinutesTab("value", value).then(function () {
+                        var errors = [];
+                        self.$minutesTab.qcronMinutesTab("value", value).then(function (expr) {
                             self.$qcronControls.tabs("option", "active", 0);
-                        }, function () {
-                            self.$hourlyTab.qcronHourlyTab("value", value).then(function () {
+                            dfd.resolve(expr);
+                        }, function (error) {
+                            errors.push(error);
+                            self.$hourlyTab.qcronHourlyTab("value", value).then(function (expr) {
                                 self.$qcronControls.tabs("option", "active", 1);
-                            }, function () {
-                                self.$dailyTab.qcronDailyTab("value", value).then(function() {
+                                dfd.resolve(expr);
+                            }, function (error) {
+                                errors.push(error);
+                                self.$dailyTab.qcronDailyTab("value", value).then(function (expr) {
                                     self.$qcronControls.tabs("option", "active", 2);
-                                }, function () {
-                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function () {
+                                    dfd.resolve(expr);
+                                }, function (error) {
+                                    errors.push(error);
+                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function (expr) {
                                         self.$qcronControls.tabs("option", "active", 3);
-                                    }, function () {
-                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function () {
+                                        dfd.resolve(expr);
+                                    }, function (error) {
+                                        errors.push(error);
+                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function (expr) {
                                             self.$qcronControls.tabs("option", "active", 4);
-                                        }, function () {
-                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function () {
+                                            dfd.resolve(expr);
+                                        }, function (error) {
+                                            errors.push(error);
+                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function (expr) {
                                                 self.$qcronControls.tabs("option", "active", 5);
-                                            }, function () {
-                                                console.log('error did not match any tabs formats');
+                                                dfd.resolve(expr);
+                                            }, function (error) {
+                                                errors.push(error);
+                                                dfd.reject(errors);
                                             });
                                         });
                                     }); 
@@ -213,8 +227,9 @@
                         throw new Error("jquery-qcron: The raw input must have all parts: 'seconds minutes hours dayOfMonth month dayOfWeek [year]'! Raw Value: [" + value + "]");
                     }
                 } else {
-                    throw new Error("jquery-qcron: The raw input value must not be empty! Raw Value [" + value + "]");
+                    dfd.resolve(this.expression);
                 }
+                return dfd.promise();
             },
             
             _init: function () {

@@ -247,17 +247,17 @@
             },
             
             _renderInputs: function () {
-                if (this.options.minute)
+                if (!!this.options.minute)
                     this._renderMinutesTab();
-                if (this.options.hour)
+                if (!!this.options.hour)
                     this._renderHourlyTab();
-                if (this.options.day)
+                if (!!this.options.day)
                     this._renderDailyTab();
-                if (this.options.week)
+                if (!!this.options.week)
                     this._renderWeeklyTab();
-                if (this.options.month)
+                if (!!this.options.month)
                     this._renderMonthlyTab();
-                if (this.options.year)
+                if (!!this.options.year)
                     this._renderYearlyTab();
 
                 function buildTab ($tab) {

@@ -462,11 +462,14 @@
                 }
                 
                 this.$element.empty();
-                this.$element.append("<span>Every</span>");
-                this.$element.append(this.$minuteSelect);
-                this.$element.append("<span>minute(s) starting at</span>");
-                this.$element.append(this.$minuteStartSelect);
-                this.$element.append("minute(s) past the hour.");
+                $("<label>Every</label>")
+                    .append(this.$minuteSelect)
+                    .append("minute(s)")
+                    .appendTo(this.$element);
+                $("<label>starting at</label>")
+                    .append(this.$minuteStartSelect)
+                    .append("past the hour.")
+                    .appendTo(this.$element);
             },
             
             build: function () {
@@ -605,12 +608,15 @@
                 }
 
                 this.$element.empty();
-                this.$element.append("<span>Every</span>");
-                this.$element.append(this.$hourSelect);
-                this.$element.append("<span>hour(s) starting at</span>");
-                this.$element.append(this.$hourStartSelect);
-                this.$element.append("<span>:</span>");
-                this.$element.append(this.$minuteStartSelect);
+                $("<label>Every</label>")
+                    .append(this.$hourSelect)
+                    .append("hour(s)")
+                    .appendTo(this.$element);
+                $("<label>starting at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
             },
             build: function () {
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + "/" + this.$hourSelect.val() + " * * ? *";
@@ -750,14 +756,18 @@
                 }
 
                 this.$element.empty();
-                this.$element.append("<span>Every</span>");
-                this.$element.append(this.$daySelect);
-                this.$element.append("<span>day(s) at</span>");
-                this.$element.append(this.$hourStartSelect);
-                this.$element.append("<span>:</span>");
-                this.$element.append(this.$minuteStartSelect);
-                this.$element.append("<span>starting on day</sapn>");
-                this.$element.append(this.$dayStartSelect);
+                $("<label>Every</label>")
+                    .append(this.$daySelect)
+                    .append("day(s)")
+                    .appendTo(this.$element);
+                $("<label>at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
+                $("<label>starting on day</label>")
+                    .append(this.$dayStartSelect)
+                    .appendTo(this.$element);
             },
             build: function () {
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() +  " " + this.$dayStartSelect.val() + "/" + this.$daySelect.val() + " * ? *";
@@ -902,10 +912,11 @@
 
                 this.$element.empty();
                 this.$element.append(this.$dayOfWeekCheckboxes);
-                this.$element.append("<span>at</span>");
-                this.$element.append(this.$hourStartSelect);
-                this.$element.append("<span>:</span>");
-                this.$element.append(this.$minuteStartSelect);
+                $("<label>at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
             },
             build: function () {
                 var selectedDaysOfWeek = [];
@@ -1085,14 +1096,18 @@
                 this.$element.empty();
                 this.$element.append($monthlyOptionOne);
                 this.$element.append($monthlyOptionTwo);
-                this.$element.append("<span>every</span>");
-                this.$element.append(this.$monthIncrementSelect);
-                this.$element.append("<span>month(s) starting on month</span>");
-                this.$element.append(this.$monthStartSelect);
-                this.$element.append("<span>at</span>");
-                this.$element.append(this.$hourStartSelect);
-                this.$element.append("<span>:</span>");
-                this.$element.append(this.$minuteStartSelect);
+                $("<label>every</label>")
+                    .append(this.$monthIncrementSelect)
+                    .append("month(s)")
+                    .appendTo(this.$element);
+                $("<label>starting on month</label>")
+                    .append(this.$monthStartSelect)
+                    .appendTo(this.$element);
+                $("<label>at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
             },
             build: function () {
                 var selectedOption = this.$element.find("input[name='qcron-monthly-option']:checked").val(),
@@ -1313,10 +1328,11 @@
                 this.$element.empty();
                 this.$element.append($yearlyOptionOne);
                 this.$element.append($yearlyOptionTwo);
-                this.$element.append("<span>at</span>");
-                this.$element.append(this.$hourStartSelect);
-                this.$element.append("<span>:</span>");
-                this.$element.append(this.$minuteStartSelect);
+                $("<label>at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
             },
             build: function () {
                 var selectedOption = this.$element.find("input[name='qcron-yearly-option']:checked").val(),

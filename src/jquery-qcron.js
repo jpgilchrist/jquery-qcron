@@ -176,54 +176,80 @@
                     var parts = value.split(/\s+/);
                     if (parts.length === 6 || parts.length === 7) {
                         var errors = [];
-                        self.$minutesTab.qcronMinutesTab("value", value).then(function (expr) {
-                            self.$qcronControls.tabs("option", "active", self.tabIndices["minutes"]);
-                            dfd.resolve(expr);
-                        }, function (error) {
-                            errors.push(error);
-                            self.$hourlyTab.qcronHourlyTab("value", value).then(function (expr) {
-                                self.$qcronControls.tabs("option", "active", self.tabIndices["hourly"]);
-                                dfd.resolve(expr);
-                            }, function (error) {
-                                errors.push(error);
-                                self.$dailyTab.qcronDailyTab("value", value).then(function (expr) {
-                                    self.$qcronControls.tabs("option", "active", self.tabIndices["daily"]);
-                                    dfd.resolve(expr);
-                                }, function (error) {
-                                    errors.push(error);
-                                    self.$weeklyTab.qcronWeeklyTab("value", value).then(function (expr) {
-                                        self.$qcronControls.tabs("option", "active", self.tabIndices["weekly"]);
-                                        dfd.resolve(expr);
-                                    }, function (error) {
-                                        errors.push(error);
-                                        self.$monthlyTab.qcronMonthlyTab("value", value).then(function (expr) {
-                                            self.$qcronControls.tabs("option", "active", self.tabIndices["monthly"]);
-                                            dfd.resolve(expr);
-                                        }, function (error) {
-                                            errors.push(error);
-                                            self.$yearlyTab.qcronYearlyTab("value", value).then(function (expr) {
-                                                self.$qcronControls.tabs("option", "active", self.tabIndices["yearly"]);
-                                                dfd.resolve(expr);
-                                            }, function (error) {
-                                                errors.push(error);
-                                                if (!!self.options.custom) {
-                                                    self.$customTab.qcronCustomTab("value", value).then(function (expr) {
-                                                        self.$qcronControls.tabs("option", "active", self.tabIndices["custom"]);
-                                                        dfd.resolve(expr);
-                                                    }, function (error) {
-                                                        errors.push(error);
-                                                        dfd.reject(errors);
-                                                    });    
-                                                } else {
-                                                    errors.push('value is not supported by the ui and custom tab is not enabled');
-                                                    dfd.reject(errors);
-                                                }
-                                            });
-                                        });
-                                    }); 
-                                });
-                            });
-                        });
+                        
+                        var val = null;
+                        if (!!this.$minutesTab && val === null) {
+                            try {
+                                val = this.$minutesTab.qcronMinutesTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["minutes"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$hourlyTab && val === null) {
+                            try {
+                                val = this.$hourlyTab.qcronHourlyTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["hourly"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$dailyTab && val === null) {
+                            try {
+                                val = this.$dailyTab.qcronDailyTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["daily"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$weeklyTab && val === null) {
+                            try {
+                                val = this.$weeklyTab.qcronWeeklyTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["weekly"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$monthlyTab && val === null) {
+                            try {
+                                val = this.$monthlyTab.qcronMonthlyTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["monthly"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$yearlyTab && val === null) {
+                            try {
+                                val = this.$yearlyTab.qcronYearlyTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["yearly"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!!this.$customTab && val === null) {
+                            try {
+                                val = this.$customTab.qcronCustomTab("value", value);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices["custom"]);
+                            } catch (exc) {
+                                errors.push(exc);
+                            }
+                        }
+                        
+                        if (!this.$customTab && val === null) {
+                            errors.push('value is not supported by the ui and custom tab is not enabled');
+                        }
+                        
+                        if (!!val) {
+                            dfd.resolve(val);
+                        } else {
+                            dfd.reject(errors);
+                        }
                     } else {
                         dfd.reject("jquery-qcron: value must have all it's parts: 'seconds minutes hours dayOfMonth month dayOfWeek [year]'! Raw Value: [" + value + "]");
                     }
@@ -250,32 +276,67 @@
                         }
                     };
                     
-                    var error = function (error) {
+                    var fail = function (error) {
                         dfd.reject(error);
                     };
                     
                     var active = this.$qcronControls.tabs("option", "active");
+                    for (var key in this.tabIndices) {
+                        if (this.tabIndices[key] === active) {
+                            active = key;
+                            break;
+                        }
+                    }
+                    var val = null;
                     switch (active) {
-                        case 0:
-                            this.$minutesTab.qcronMinutesTab("value").then(success, error);
+                        case "minutes":
+                            try {
+                                success(this.$minutesTab.qcronMinutesTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 1:
-                            this.$hourlyTab.qcronHourlyTab("value").then(success, error);
+                        case "hourly":
+                            try {
+                                success(this.$hourlyTab.qcronHourlyTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 2:
-                            this.$dailyTab.qcronDailyTab("value").then(success, error);
+                        case "daily":
+                            try {
+                                success(this.$dailyTab.qcronDailyTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 3:
-                            this.$weeklyTab.qcronWeeklyTab("value").then(success, error);
+                        case "weekly":
+                            try {
+                                success(this.$weeklyTab.qcronWeeklyTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 4:
-                            this.$monthlyTab.qcronMonthlyTab("value").then(success, error);
+                        case "monthly":
+                            try {
+                                success(this.$monthlyTab.qcronMonthlyTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 5:
-                            this.$yearlyTab.qcronYearlyTab("value").then(success, error);
+                        case "yearly":
+                            try {
+                                success(this.$yearlyTab.qcronYearlyTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
-                        case 6:
-                            this.$customTab.qcronCustomTab("value").then(success, error);
+                        case "custom":
+                            try {
+                                success(this.$customTab.qcronCustomTab("value"));
+                            } catch (exc) {
+                                fail(exc);
+                            }
                             break;
                     }
                 }
@@ -413,27 +474,19 @@
             },
             
             value: function (value) {
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }   
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
 
             _builder: function () {
@@ -563,27 +616,20 @@
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + "/" + this.$hourSelect.val() + " * * ? *";
             },
             value: function (value) {
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }   
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
             _builder: function () {
                 function Builder(context) {
@@ -717,27 +763,19 @@
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() +  " " + this.$dayStartSelect.val() + "/" + this.$daySelect.val() + " * ? *";
             },
             value: function (value) {
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }   
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
             _builder: function () {
                 function Builder(context) {
@@ -878,27 +916,19 @@
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + " ? * " + selectedDaysOfWeek.join(",") + " *";
             },
             value: function (value) {
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }    
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
             _builder: function () {
                 function Builder(context) {
@@ -1091,27 +1121,19 @@
                 }
             },
             value: function (value) {
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }    
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
             _builder: function () {
                 function Builder(context) {
@@ -1323,26 +1345,19 @@
             },
             value: function (value) {
                 var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    var parts = value.split(/\s+/);
-                    var builder = this._builder();
-                    try {
-                        builder.seconds(parts[0])
-                            .minutes(parts[1])
-                            .hours(parts[2])
-                            .month(parts[4])
-                            .dayOfMonth(parts[3])
-                            .dayOfWeek(parts[5]);
-                        if (!!parts[6])
-                            builder.year(parts[6]);
-                        dfd.resolve(builder.build());
-                    } catch (ex) {
-                        dfd.reject(ex);
-                    }   
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();    
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .month(parts[4])
+                    .dayOfMonth(parts[3])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
             },
             _builder: function () {
                 function Builder(context) {
@@ -1485,15 +1500,10 @@
                 return !!this.$input.val() ? this.$input.val().trim() : null;
             },
             value: function (value) {                
-                var dfd = $.Deferred();
-                if (!value) {
-                    dfd.resolve(this.build());
-                } else {
-                    this.$input.val(value.trim());
-                    dfd.resolve(value);
-                    this._trigger(":build");    
-                }
-                return dfd.promise();
+                if (!value)
+                    return this.build();
+                this.$input.val(value.trim());
+                return this.$input.val();
             }
         });
                     

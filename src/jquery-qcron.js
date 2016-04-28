@@ -1511,6 +1511,8 @@
                     
                 this.$input = $("<input type='text' class='qcron-raw-input'/>").appendTo(this.$element);
                 this.$input.prop('disabled', !this.options.inputEnabled);
+                $("<div><a target='_blank' href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger'>Quartz Syntax Help</a></div>")
+                    .appendTo(this.$element);
             },
             build: function () {                
                 return !!this.$input.val() ? this.$input.val().trim() : null;

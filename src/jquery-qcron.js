@@ -130,7 +130,6 @@
         
         $.widget("jpgilchrist.qcron", {
             options: {
-                initial: "0 0/4 * 1/1 * ? *",
                 minute: true,
                 hour: true,
                 day: true,
@@ -139,7 +138,8 @@
                 year: true,
                 custom: true,
                 allowUserOverride: false,
-                validateUrl: "http://localhost/veoci/api-v1/p/cron",
+                allowUserOverrideNote: null,
+                validateUrl: null,
                 defaultTab: "daily"
             },
             
@@ -302,7 +302,8 @@
                     option == "daily"   ? 2 :
                     option == "weekly"  ? 3 :
                     option == "monthly" ? 4 :
-                    option == "yearly"  ? 5 : 3;
+                    option == "yearly"  ? 5 :
+                    option == "custom"  ? 6 : 3;
                 this.$qcronControls.tabs({
                     active: active
                 });
@@ -360,9 +361,13 @@
             __customTabBodyTemplate: "<div id='qcron-custom-tab'></div>",
             _renderCustomTab: function () {
                 this.$qcronControls.find("ul").append($(this.__customTabItemTemplate));
-                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab({
-                    inputEnabled: this.options.allowUserOverride
-                });
+                var options = {
+                    inputEnabled: !!this.options.allowUserOverride
+                };
+                if (!!this.options.allowUserOverrideNote)
+                    options.note = this.options.allowUserOverrideNote;
+                    
+                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab(options);
                 this.$qcronControls.append(this.$customTab);
             }
         });
@@ -1449,14 +1454,20 @@
         
         $.widget("jpgilchrist.qcronCustomTab", {
             options: {
-                inputEnabled: true
+                inputEnabled: true,
+                note: "Custom override is not enabled through the ui."
             },
             _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
+                if (!this.options.inputEnabled)
+                    $("<div class='qcron-custom-tab-note'></div>")
+                        .html("<strong>Note: </strong><span>" + this.options.note + "</span>")
+                        .appendTo(this.$element);
+                    
                 this.$input = $("<input type='text' class='qcron-raw-input'/>").appendTo(this.$element);
-                this.$input.prop('disabled', this.options.inputEnabled);
+                this.$input.prop('disabled', !this.options.inputEnabled);
             },
             build: function () {                
                 return !!this.$input.val() ? this.$input.val().trim() : null;

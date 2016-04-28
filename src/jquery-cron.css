@@ -101,6 +101,12 @@
 
 .has-qcron {
     position: relative;
+    line-height: 2;
+}
+
+.has-qcron label {
+    display: inline-block;
+    margin-right: 5px;
 }
 
 .jqcron-preview-dates {

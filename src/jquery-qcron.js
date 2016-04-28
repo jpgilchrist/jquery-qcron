@@ -130,12 +130,12 @@
         
         $.widget("jpgilchrist.qcron", {
             options: {
-                minute: true,
-                hour: true,
-                day: true,
-                week: true,
-                month: true,
-                year: true,
+                minutes: true,
+                hourly: true,
+                daily: true,
+                weekly: true,
+                monthly: true,
+                yearly: true,
                 custom: true,
                 allowUserOverride: false,
                 allowUserOverrideNote: null,
@@ -149,6 +149,23 @@
             
             _create: function () {
                 this._on(this.element, {});
+                
+                var currentTabIndex = 0;
+                this.tabIndices = {};
+                if (!!this.options.minutes)
+                    this.tabIndices["minutes"] = currentTabIndex++;
+                if (!!this.options.hourly)
+                    this.tabIndices["hourly"] = currentTabIndex++;
+                if (!!this.options.daily)
+                    this.tabIndices["daily"] = currentTabIndex++;
+                if (!!this.options.weekly)
+                    this.tabIndices["weekly"] = currentTabIndex++;
+                if (!!this.options.monthly)
+                    this.tabIndices["monthly"] = currentTabIndex++;
+                if (!!this.options.yearly)
+                    this.tabIndices["yearly"] = currentTabIndex++;
+                if (!!this.options.custom)
+                    this.tabIndices["custom"] = currentTabIndex++;
             },
             
             value: function (value) {
@@ -160,38 +177,38 @@
                     if (parts.length === 6 || parts.length === 7) {
                         var errors = [];
                         self.$minutesTab.qcronMinutesTab("value", value).then(function (expr) {
-                            self.$qcronControls.tabs("option", "active", 0);
+                            self.$qcronControls.tabs("option", "active", self.tabIndices["minutes"]);
                             dfd.resolve(expr);
                         }, function (error) {
                             errors.push(error);
                             self.$hourlyTab.qcronHourlyTab("value", value).then(function (expr) {
-                                self.$qcronControls.tabs("option", "active", 1);
+                                self.$qcronControls.tabs("option", "active", self.tabIndices["hourly"]);
                                 dfd.resolve(expr);
                             }, function (error) {
                                 errors.push(error);
                                 self.$dailyTab.qcronDailyTab("value", value).then(function (expr) {
-                                    self.$qcronControls.tabs("option", "active", 2);
+                                    self.$qcronControls.tabs("option", "active", self.tabIndices["daily"]);
                                     dfd.resolve(expr);
                                 }, function (error) {
                                     errors.push(error);
                                     self.$weeklyTab.qcronWeeklyTab("value", value).then(function (expr) {
-                                        self.$qcronControls.tabs("option", "active", 3);
+                                        self.$qcronControls.tabs("option", "active", self.tabIndices["weekly"]);
                                         dfd.resolve(expr);
                                     }, function (error) {
                                         errors.push(error);
                                         self.$monthlyTab.qcronMonthlyTab("value", value).then(function (expr) {
-                                            self.$qcronControls.tabs("option", "active", 4);
+                                            self.$qcronControls.tabs("option", "active", self.tabIndices["monthly"]);
                                             dfd.resolve(expr);
                                         }, function (error) {
                                             errors.push(error);
                                             self.$yearlyTab.qcronYearlyTab("value", value).then(function (expr) {
-                                                self.$qcronControls.tabs("option", "active", 5);
+                                                self.$qcronControls.tabs("option", "active", self.tabIndices["yearly"]);
                                                 dfd.resolve(expr);
                                             }, function (error) {
                                                 errors.push(error);
                                                 if (!!self.options.custom) {
                                                     self.$customTab.qcronCustomTab("value", value).then(function (expr) {
-                                                        self.$qcronControls.tabs("option", "active", 6);
+                                                        self.$qcronControls.tabs("option", "active", self.tabIndices["custom"]);
                                                         dfd.resolve(expr);
                                                     }, function (error) {
                                                         errors.push(error);
@@ -280,33 +297,28 @@
             },
             
             _renderInputs: function () {
-                if (!!this.options.minute)
+                if (!!this.options.minutes)
                     this._renderMinutesTab();
-                if (!!this.options.hour)
+                if (!!this.options.hourly)
                     this._renderHourlyTab();
-                if (!!this.options.day)
+                if (!!this.options.daily)
                     this._renderDailyTab();
-                if (!!this.options.week)
+                if (!!this.options.weekly)
                     this._renderWeeklyTab();
-                if (!!this.options.month)
+                if (!!this.options.monthly)
                     this._renderMonthlyTab();
-                if (!!this.options.year)
+                if (!!this.options.yearly)
                     this._renderYearlyTab();
                 if (!!this.options.custom)
                     this._renderCustomTab();
                 
-                var option = this.options.defaultTab;
-                var active = 
-                    option == "minutes" ? 0 : 
-                    option == "hourly"  ? 1 :
-                    option == "daily"   ? 2 :
-                    option == "weekly"  ? 3 :
-                    option == "monthly" ? 4 :
-                    option == "yearly"  ? 5 :
-                    option == "custom"  ? 6 : 3;
-                this.$qcronControls.tabs({
-                    active: active
-                });
+                if (!!this.options.defaultTab && !!this.tabIndices[this.options.defaultTab]) {
+                    this.$qcronControls.tabs({
+                        active: this.tabIndices[this.options.defaultTab]
+                    });
+                } else {
+                    this.$qcronControls.tabs();
+                }        
             },
             
             __minutesTabItemTemplate: "<li><a href='#qcron-minutes-tab'>Minutes</a></li>",

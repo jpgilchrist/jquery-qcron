@@ -667,9 +667,14 @@
                         if (!mi)
                             throw new Error("must set minutes first.");
                         var p = /^([0-9]|1[0-9]|2[0-3])\/([1-9]|1[0-9]|2[0-3])$/;
-                        if (p.exec(hours) === null)
+                        var match = p.exec(hours);
+                        if (match === null)
                             throw new Error("hours must be in the form {0-23}/{1-23}");
                         h = hours;
+                        
+                        ui.$hourSelect.val(match[2]);
+                        ui.$hourStartSelect.va(match[1]);
+                        
                         return this;
                     };
 

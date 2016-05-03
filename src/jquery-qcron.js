@@ -1295,6 +1295,19 @@
             options: {},
             _create: function () {
                 this.$element = $(this.element);
+                
+                this._on(this.element, {
+                    "change select": function (event) {
+                        var $target = $(event.target);
+                        if ($target.parent().hasClass("qcron-yearly-option-one")) {
+                            this.$element.find("input[name='qcron-yearly-option']")[0].checked = true;
+                            this.$element.find("input[name='qcron-yearly-option']")[1].checked = false;
+                        } else if ($target.parent().hasClass("qcron-yearly-option-two")) {
+                            this.$element.find("input[name='qcron-yearly-option']")[0].checked = false;
+                            this.$element.find("input[name='qcron-yearly-option']")[1].checked = true;
+                        }
+                    }
+                });
             },
             _init: function () {
                 var $yearlyOptionOne = $("<div class='qcron-yearly-option-one'></div>");

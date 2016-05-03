@@ -1219,8 +1219,8 @@
 
                         dom = dayOfMonth;
 
-                        ui.$monthlyOptionOneRadio.attr('checked', !!match[1]);
-                        ui.$monthlyOptionTwoRadio.attr('checked', !match[1]);
+                        ui.$monthlyOptionOneRadio[0].checked = !!match[1];
+                        ui.$monthlyOptionTwoRadio[0].checked = !match[1];
                         if (!!match[1])
                             ui.$mo1DomStartSelect.val(dom);
 
@@ -1456,8 +1456,8 @@
 
                         dom = dayOfMonth;
 
-                        ui.$yearlyOptionOneRadio.attr('checked', !!match[1]);
-                        ui.$yearlyOptionTwoRadio.attr('checked', !match[1]);
+                        ui.$yearlyOptionOneRadio[0].checked = !!match[1];
+                        ui.$yearlyOptionTwoRadio[0].checked = !match[1];
                         if (!!match[1])
                             ui.$yearlyOptionOneDomSelect.val(dom);
 

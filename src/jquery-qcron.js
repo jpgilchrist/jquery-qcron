@@ -1,6 +1,6 @@
 /*!
  * jquery-cron
- * Version 0.0.0
+ * Version 0.1.1
  * 
  * Copyright (c) 2016 James P. Gilchrist
  *
@@ -15,6 +15,7 @@
 (function ($) {
     function setup () {
         
+        // all possible week days for use in the weekly tab
         var __weekdays = {
             1: {
                 display: "Sunday",
@@ -46,6 +47,7 @@
             }
         };
         
+        // all possible week options for the montly and yearly tabs
         var __weeks = {
             1: {
                 display: "First",
@@ -65,6 +67,8 @@
             }
         };
         
+        
+        // all possible months and their associated *maximum* number of days
         var __months = {
             1: {
                 display: "January",
@@ -128,133 +132,202 @@
             }
         };
         
+        /*
+         * Root Widget for Jquery Qcron, which encapsulates several tabs
+         * - minutes, hourly, daily, weekly, monthly, yearly, and custom
+         * 
+         * uses jquery ui tabs to render a set of tabs, each tab is its own
+         * jquery widget that controls it's own logic and uses events and callbacks
+         * to communicate with this root level widget. 
+         */
         $.widget("jpgilchrist.qcron", {
+            
+            // default options for Jquery Qcron
             options: {
-                minutes: true,
-                hourly: true,
-                daily: true,
-                weekly: true,
-                monthly: true,
-                yearly: true,
-                custom: true,
-                allowUserOverride: false,
-                allowUserOverrideNote: null,
-                validateUrl: null,
-                defaultTab: "daily"
+                minutes: true,  // display the minutes tab
+                hourly: true,   // display the hourly tab
+                daily: true,    // display the daily tab
+                weekly: true,   // display the weekly tab
+                monthly: true,  // display the monthly tab
+                yearly: true,   // display the yearly tab
+                custom: true,   // display the custom tab
+                allowUserOverride: false,       // allows the user to manually enter a cron expression in the custom tab
+                allowUserOverrideNote: null,    // An optional note to render as HTML on the custom tab
+                validateUrl: null,  // URL that takes a GET with the query params: expression and count, which should validate the expression
+                defaultTab: "daily" // the tab to be displayed (selected) by default
             },
             
-            __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",
-            __rawInputTemplate: "<div class='qcron-raw'></div>",
-            __previewTemplate : "<div class='qcron-preview'></div>",
+            __controlsTemplate: "<div class='qcron-controls'><ul></ul></div>",  // the tabs
             
             _create: function () {
-                this._on(this.element, {});
                 
+                // tabIndicies keeps track of which tabs are actually rendered and available to 
+                // activate by utilizing that index in jquery ui tabs widget. Whether they are 
+                // rendered or not is determined by the options provided during initialization.
                 var currentTabIndex = 0;
                 this.tabIndices = {};
                 if (!!this.options.minutes)
-                    this.tabIndices["minutes"] = currentTabIndex++;
+                    this.tabIndices.minutes = currentTabIndex++;
                 if (!!this.options.hourly)
-                    this.tabIndices["hourly"] = currentTabIndex++;
+                    this.tabIndices.hourly = currentTabIndex++;
                 if (!!this.options.daily)
-                    this.tabIndices["daily"] = currentTabIndex++;
+                    this.tabIndices.daily = currentTabIndex++;
                 if (!!this.options.weekly)
-                    this.tabIndices["weekly"] = currentTabIndex++;
+                    this.tabIndices.weekly = currentTabIndex++;
                 if (!!this.options.monthly)
-                    this.tabIndices["monthly"] = currentTabIndex++;
+                    this.tabIndices.monthly = currentTabIndex++;
                 if (!!this.options.yearly)
-                    this.tabIndices["yearly"] = currentTabIndex++;
+                    this.tabIndices.yearly = currentTabIndex++;
                 if (!!this.options.custom)
-                    this.tabIndices["custom"] = currentTabIndex++;
+                    this.tabIndices.custom = currentTabIndex++;
             },
             
+            /**
+             * Retrieves or sets the value utlizing a $.Deferred promise object.
+             * 
+             * Using value as a setter:
+             * - calls each tabs respective value function
+             * - determines which tab supports the specified expression
+             * - encountering an unsupported expression:
+             * -- with validateURL: calls GET validateUrl?expression=value&count=20 to determine it's validity. 
+             * --- if it's invalid, an error is thrown
+             * --- if it's valid, custom tab is activated and the expression is rendered in the input.
+             * -- without validate URL
+             * --- activates the cust tab and renders the expression in the input.
+             * 
+             * Using value as a getter:
+             * - calls the value function of the currently activated tab
+             * - optionally validates the value returned with the validateUrl (if specified)
+             * 
+             * @param   {string}   value The expression
+             * @returns {promise} a promise resolving a valid expression or error
+             */
             value: function (value) {
-                var dfd = $.Deferred();
-                var self = this;
-                if (!!value) {
-                    value = value.trim();
-                    var parts = value.split(/\s+/);
-                    if (parts.length === 6 || parts.length === 7) {
-                        var errors = [];
+                var dfd = $.Deferred(); // the deferred object
+                
+                var self = this; 
+                
+                if (!!value) { // if a value has been passed, then we need to set the value
+                    
+                    value = value.trim(); // first clean the value
+                    
+                    var parts = value.split(/\s+/); // split on white spaces
+                    
+                    // an expression must at least consist of:
+                    // - 6 parts [seconds minutes hour dayOfMonth month dayOfYear]
+                    // - 7 parts [seconds minutes hour dayOfMonth month dayOfYear year]
+                    if (parts.length === 6 || parts.length === 7) { 
+                        var errors = []; // list of erros to reject with in the case of an error
                         
                         var val = null;
-                        if (!!this.$minutesTab && val === null) {
+                        if (!!this.$minutesTab && val === null) { // if minutes tab is available and no val is found yet
+                            // attempt the set the value of the minutes tab
+                            // - if it succeeds, then activat the minutes tab
+                            // - otherwise add the error to the array to reject later
                             try {
-                                val = this.$minutesTab.qcronMinutesTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["minutes"]);
+                                val = this.$minutesTab.qcronMinutesTab("value", value); 
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.minutes); 
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$hourlyTab && val === null) {
+                        if (!!this.$hourlyTab && val === null) { // if hourly tab is available and no val is found yet
+                            // attempt the set the value of the hourly tab
+                            // - if it succeeds, then activate the hourly tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$hourlyTab.qcronHourlyTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["hourly"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.hourly);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$dailyTab && val === null) {
+                        if (!!this.$dailyTab && val === null) { // if daily tab is available and no val is found yet
+                            // attempt the set the value of the daily tab
+                            // - if it succeeds, then activate the daily tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$dailyTab.qcronDailyTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["daily"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.daily);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$weeklyTab && val === null) {
+                        if (!!this.$weeklyTab && val === null) { // if weekly tab is available and no val is found yet
+                            // attempt the set the value of the weekly tab
+                            // - if it succeeds, then activate the weekly tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$weeklyTab.qcronWeeklyTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["weekly"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.weekly);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$monthlyTab && val === null) {
+                        if (!!this.$monthlyTab && val === null) { // if monthly tab is available and no val is found yet
+                            // attempt the set the value of the monthly tab
+                            // - if it succeeds, then activate the monthly tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$monthlyTab.qcronMonthlyTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["monthly"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.monthly);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$yearlyTab && val === null) {
+                        if (!!this.$yearlyTab && val === null) { // if yearly tab is available and no val is found yet
+                            // attempt the set the value of the yearly tab
+                            // - if it succeeds, then activate the yearly tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$yearlyTab.qcronYearlyTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["yearly"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.yearly);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
-                        if (!!this.$customTab && val === null) {
+                        if (!!this.$customTab && val === null) { // if custom tab is available and no val is found yet
+                            // attempt the set the value of the custom tab
+                            // - if it succeeds, then activate the custom tab
+                            // - otherwise add the error to the array to reject later
                             try {
                                 val = this.$customTab.qcronCustomTab("value", value);
-                                this.$qcronControls.tabs("option", "active", self.tabIndices["custom"]);
+                                this.$qcronControls.tabs("option", "active", self.tabIndices.custom);
                             } catch (exc) {
                                 errors.push(exc);
                             }
                         }
                         
+                        // if val is still null here and custom tab wasn't available then add one last error to the errors array
                         if (!this.$customTab && val === null) {
                             errors.push('value is not supported by the ui and custom tab is not enabled');
                         }
                         
-                        if (!!val) {
+                        if (!!val) { // if there is a val then resolve with the val
                             dfd.resolve(val);
-                        } else {
+                        } else { // otherwise reject with the errors array
                             dfd.reject(errors);
                         }
+                        
                     } else {
-                        dfd.reject("jquery-qcron: value must have all it's parts: 'seconds minutes hours dayOfMonth month dayOfWeek [year]'! Raw Value: [" + value + "]");
+                        // reject because we know that there is no possibility for this to be valid.
+                        dfd.reject("value must have all it's parts: 'seconds minutes hours dayOfMonth month dayOfWeek [year]'! Raw Value: [" + value + "]");
                     }
-                } else {
+                    
+                } else { // if no value has been passed to the function, then get the value out of the current activated tab
+                    
+                    /**
+                     * Function to call on successfully getting the value out of the currently activated tab
+                     * @param {string} value A cron expression returned by the tab
+                     */
                     var success = function (value) {
+                        // if initialized with a validateUrl, then call the endpoint and handle the validation
                         if (!!self.options.validateUrl) {
                             $.ajax({
                                 url: self.options.validateUrl,
@@ -265,21 +338,30 @@
                                     count: 20
                                 },
                                 success: function (data) {
+                                    // resolve with the cron expression returned by the endpoint
                                     dfd.resolve(data.expression);
                                 },
                                 error: function (error) {
+                                    // reject with the error returned by the endpoint
                                     dfd.reject(error);
                                 }
                             });
-                        } else {
+                        } else { 
+                            // if validateUrl was not specified that we just have to accept the value, even on a custom tab. 
+                            // it's up to the initializer to accept this outcome... 
                             dfd.resolve(value);
                         }
                     };
                     
+                    /**
+                     * Function to call when encountering an error when getting the value out of the currently activated tab.
+                     * @param {Error} error The error thrown
+                     */
                     var fail = function (error) {
                         dfd.reject(error);
                     };
                     
+                    // determines which tab is currently activated, by looping over the tabIndices map for a match
                     var active = this.$qcronControls.tabs("option", "active");
                     for (var key in this.tabIndices) {
                         if (this.tabIndices[key] === active) {
@@ -287,7 +369,8 @@
                             break;
                         }
                     }
-                    var val = null;
+
+                    // switch on the activated tab and get the value. call success or fail depending on the outcome.
                     switch (active) {
                         case "minutes":
                             try {
@@ -340,24 +423,27 @@
                             break;
                     }
                 }
+                
+                // return the promise object
                 return dfd.promise();
             },
             
             _init: function () {
-                this.$element = $(this.element);
-                this.$element.empty();
+                this.$element = $(this.element); // convenient cache of the jquery object of the element
+                this.$element.empty(); // empty the html and start from scratch
                 
-                this.$element.addClass("has-qcron");
-                if (!!this.options.width)
+                this.$element.addClass("has-qcron"); // add a convenience class that indicates the widget is initialized
+                if (!!this.options.width) // establish a width if specified as an option
                     this.$element.css("width", this.options.width);
                 
-                this.$qcronControls = $(this.__controlsTemplate);
-                this.$element.append(this.$qcronControls);
+                this.$qcronControls = $(this.__controlsTemplate); // cache the tabs jquery object template
+                this.$element.append(this.$qcronControls); // appned tabs template to the element in order to prepare for rendering the actual content
                 
-                this._renderInputs();
+                this._renderInputs(); // render the individual tabs
             },
             
             _renderInputs: function () {
+                // render the individual tabs based on whether they have been enabled or not.
                 if (!!this.options.minutes)
                     this._renderMinutesTab();
                 if (!!this.options.hourly)
@@ -373,11 +459,12 @@
                 if (!!this.options.custom)
                     this._renderCustomTab();
                 
+                // if the defaultTab has been specified and it's in the "enabled" set of tabs, then activate it in the initialization of jquery ui tabs
                 if (!!this.options.defaultTab && !!this.tabIndices[this.options.defaultTab]) {
                     this.$qcronControls.tabs({
                         active: this.tabIndices[this.options.defaultTab]
                     });
-                } else {
+                } else { // otherwise just initialize jquery ui tabs generically
                     this.$qcronControls.tabs();
                 }        
             },
@@ -385,82 +472,100 @@
             __minutesTabItemTemplate: "<li><a href='#qcron-minutes-tab'>Minutes</a></li>",
             __minutesTabBodyTemplate: "<div id='qcron-minutes-tab'></div>",
             _renderMinutesTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__minutesTabItemTemplate));
-                this.$minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab();
+                this.$minutesTab = $(this.__minutesTabBodyTemplate).qcronMinutesTab(); // initializes the minutes tab widget
                 this.$qcronControls.append(this.$minutesTab);
             },
 
             __hourlyTabItemTemplate: "<li><a href='#qcron-hourly-tab'>Hourly</a></li>",
             __hourlyTabBodyTemplate: "<div id='qcron-hourly-tab'></div>",
             _renderHourlyTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__hourlyTabItemTemplate));
-                this.$hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab();
+                this.$hourlyTab = $(this.__hourlyTabBodyTemplate).qcronHourlyTab(); // initializes the hourly tab widget
                 this.$qcronControls.append(this.$hourlyTab);
             },
 
             __dailyTabItemTemplate: "<li><a href='#qcron-daily-tab'>Daily</a></li>",
             __dailyTabBodyTemplate: "<div id='qcron-daily-tab'></div>",
             _renderDailyTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__dailyTabItemTemplate));
-                this.$dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab();
+                this.$dailyTab = $(this.__dailyTabBodyTemplate).qcronDailyTab(); // initializes the daily tab widget
                 this.$qcronControls.append(this.$dailyTab);
             },
 
             __weeklyTabItemTemplate: "<li><a href='#qcron-weekly-tab'>Weekly</a></li>",
             __weeklyTabBodyTemplate: "<div id='qcron-weekly-tab'></div>",
             _renderWeeklyTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__weeklyTabItemTemplate));
-                this.$weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab();
+                this.$weeklyTab = $(this.__weeklyTabBodyTemplate).qcronWeeklyTab(); // initializes the weekly tab widget
                 this.$qcronControls.append(this.$weeklyTab);
             },
 
             __monthlyTabItemTemplate: "<li><a href='#qcron-monthly-tab'>Monthly</a></li>",
             __monthlyTabBodyTemplate: "<div id='qcron-monthly-tab'></div>",
             _renderMonthlyTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__monthlyTabItemTemplate));
-                this.$monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab();
+                this.$monthlyTab = $(this.__monthlyTabBodyTemplate).qcronMonthlyTab(); // initializes the monthly tab widget
                 this.$qcronControls.append(this.$monthlyTab);
             },
 
             __yearlyTabItemTemplate: "<li><a href='#qcron-yearly-tab'>Yearly</a></li>",
             __yearlyTabBodyTemplate: "<div id='qcron-yearly-tab'></div>",
             _renderYearlyTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__yearlyTabItemTemplate));
-                this.$yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab();
+                this.$yearlyTab = $(this.__yearlyTabBodyTemplate).qcronYearlyTab(); // initializes the yearly tab widget
                 this.$qcronControls.append(this.$yearlyTab);
             },
             
             __customTabItemTemplate: "<li><a href='#qcron-custom-tab'>Custom</a></li>",
             __customTabBodyTemplate: "<div id='qcron-custom-tab'></div>",
             _renderCustomTab: function () {
+                // appends and renders the tab according to jquery ui tabs specification
                 this.$qcronControls.find("ul").append($(this.__customTabItemTemplate));
                 var options = {
-                    inputEnabled: !!this.options.allowUserOverride
+                    inputEnabled: !!this.options.allowUserOverride // disables the input of the custom tab
                 };
-                if (!!this.options.allowUserOverrideNote)
+                if (!!this.options.allowUserOverrideNote) // provides a note to render on the custom tab
                     options.note = this.options.allowUserOverrideNote;
                     
-                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab(options);
+                this.$customTab = $(this.__customTabBodyTemplate).qcronCustomTab(options); // initializes the custom tab widget
                 this.$qcronControls.append(this.$customTab);
             }
         });
         
-        
+        /*
+         * Jquery Qcron Minutes Tab
+         * 
+         * Defines a very strict definition for establish a 'minutes' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S  M   H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A/B  *  *  *  ?  *
+         */
         $.widget("jpgilchrist.qcronMinutesTab", {
             options: {},
             _create: function () {
-                this.$element = $(this.element);
+                this.$element = $(this.element); // convenient element cache
             },
+            
             _init: function () {
-                this.$minuteSelect = $("<select class='qcron-minute-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$minuteSelect = $("<select class='qcron-minute-select'></select>"); // the minute increment
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
                 
+                // add 0 to 59 as possible start minutes
+                // add 1 5o 59 as possibel minute increments
                 for (var i = 0; i < 60; i++) {
                     if (i > 0)
                         this.$minuteSelect.append("<option value='" + i + "'>" + i + "</option>");
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + i + "</option>");
                 }
                 
+                // empty and render
                 this.$element.empty();
                 $("<label>Every</label>")
                     .append(this.$minuteSelect)
@@ -472,10 +577,21 @@
                     .appendTo(this.$element);
             },
             
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
                 return "0 " + this.$minuteStartSelect.val() + "/" + this.$minuteSelect.val() + " * * * ? *";
             },
             
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -492,10 +608,30 @@
                 return builder.build();
             },
 
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} minutes tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for minutes tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         var p = /^0$/;
                         if (p.exec(seconds) === null)
@@ -504,6 +640,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A/B where A is 0 - 59 and B is 1 - 59.
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -513,12 +656,20 @@
                             throw new Error("minutes must be in the form {int}/{int}");
                         mi = minutes;
 
+                        // the minutes are valid, upate the ui
                         ui.$minuteStartSelect.val(match[1]);
                         ui.$minuteSelect.val(match[2]);
 
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is *
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -530,6 +681,13 @@
                     };
                     
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is * or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hour first");
@@ -540,6 +698,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set dom first');
@@ -550,6 +715,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A where A is * or ? but not equivalent to day of month
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -564,6 +736,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -574,6 +753,11 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -586,20 +770,32 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Hourly Tab
+         * 
+         * Defines a very strict definition for establish a 'hourly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns.
+         *                                          S M  H  Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B/C  *  *  ?  *
+         */
         $.widget("jpgilchrist.qcronHourlyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
-                this.$hourSelect = $("<select class='qcron-hour-select'></select>");
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$hourSelect = $("<select class='qcron-hour-select'></select>"); // the hour increment
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 1 - 23 as possible hour increments
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possibel start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i > 0 && i < 24)
                         this.$hourSelect.append("<option value='" + i + "'>" + i + "</option>");
@@ -608,6 +804,7 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                // empty and render
                 this.$element.empty();
                 $("<label>Every</label>")
                     .append(this.$hourSelect)
@@ -619,9 +816,22 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + "/" + this.$hourSelect.val() + " * * ? *";
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -638,10 +848,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} hourly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for hourly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         var p = /^0$/;
                         if (seconds.match(p) === null)
@@ -650,6 +881,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -664,6 +902,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A/B where A is 0 - 23 and B is 1 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -679,6 +924,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is * or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hour first");
@@ -689,6 +941,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} invalid month error
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set dom first');
@@ -699,6 +958,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A where A is * or ? ( but not equal to day of month )
+                     * @throws {Error} invalid day of week error
+                     * @param   {[[Type]]} dayOfWeek [[Description]]
+                     * @returns {[[Type]]} [[Description]]
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -713,6 +979,14 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * 
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -722,7 +996,13 @@
                         y = year;
                         return this;
                     };
-
+                    
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -736,21 +1016,33 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Daily Tab
+         * 
+         * Defines a very strict definition for establish a 'daily' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B C/D *  ?  *
+         */
         $.widget("jpgilchrist.qcronDailyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
-                this.$daySelect = $("<select class='qcron-domincrement-select'></select>");
-                this.$dayStartSelect = $("<select class='qcron-domstart-select'></select>");
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$daySelect = $("<select class='qcron-domincrement-select'></select>"); // the day increment
+                this.$dayStartSelect = $("<select class='qcron-domstart-select'></select>"); // the start day
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 1 - 31 as possible day increments
+                // add 1 - 31 as possible start days
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possibel start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i > 0 && i < 32) {
                         this.$daySelect.append("<option value='" + i + "'>" + i + "</option>");
@@ -761,6 +1053,7 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                // empty and render
                 this.$element.empty();
                 $("<label>Every</label>")
                     .append(this.$daySelect)
@@ -775,9 +1068,22 @@
                     .append(this.$dayStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() +  " " + this.$dayStartSelect.val() + "/" + this.$daySelect.val() + " * ? *";
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -793,10 +1099,32 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} daily tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for daily tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * 
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -804,6 +1132,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -818,6 +1153,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -832,6 +1174,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A/B where A is 1-31 and B is 1-31.
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hour first");
@@ -847,6 +1196,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set dom first');
@@ -857,6 +1213,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A where A is ?
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -867,6 +1230,14 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * 
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -877,6 +1248,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -890,32 +1267,45 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Weekly Tab
+         * 
+         * Defines a very strict definition for establish a 'weekly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M   Dow  Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  ?  *  C,D,E *
+         */
         $.widget("jpgilchrist.qcronWeeklyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
-                this.$dayOfWeekCheckboxes = $("<div class='qcron-dow-checkboxes'></div>");
+                this.$dayOfWeekCheckboxes = $("<div class='qcron-dow-checkboxes'></div>"); // day of week check boxes contaienr
                 
                 var self = this;
+                
+                // add a checkbox for each weekday Sunday through Monday to the container
                 $.each(__weekdays, function (key, weekday) {
                     self.$dayOfWeekCheckboxes.append("<label><input type='checkbox' class='qcron-dow-input' value='" + key + "'/>" + weekday.display + "</label>");
                 });
                 
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possible start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i < 24)
                         this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                // empty and render
                 this.$element.empty();
                 this.$element.append(this.$dayOfWeekCheckboxes);
                 $("<label>at</label>")
@@ -924,14 +1314,28 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
                 var selectedDaysOfWeek = [];
+                // find all selected weekdays and add it to the array
                 this.$dayOfWeekCheckboxes.find("input.qcron-dow-input:checked").each(function(key, dow) {
                     selectedDaysOfWeek.push(__weekdays[$(dow).val()].value);
                 });
 
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + " ? * " + selectedDaysOfWeek.join(",") + " *";
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -947,10 +1351,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} weekly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for weekly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -958,6 +1383,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes expression
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -972,6 +1404,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0-23.
+                     * @throws {Error} invalid hours expression
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -986,6 +1425,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hour first");
@@ -996,6 +1442,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set day of month first');
@@ -1006,6 +1459,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A,B,C,D where is a common seperated list of numbers that are values 1 - 7. 
+                     * @throws {Error} invalid day of week error
+                     * @param   {string}   dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1029,6 +1489,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1038,6 +1505,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1051,22 +1524,32 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Monthly Tab
+         * 
+         * Defines a very strict definition for establish a 'monthly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom  M   Dow  Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  C  D/E   ?   *
+         *                                          0 A B  ?  C/D   E#F *
+         */
         $.widget("jpgilchrist.qcronMonthlyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
                 
                 this._on(this.element, {
+                    // listen for select (dropdown) changes
                     "change select": function (event) {
                         var $target = $(event.target);
-                        if ($target.parent().hasClass("qcron-monthly-option-one")) {
+                        if ($target.parent().hasClass("qcron-monthly-option-one")) { // if the select is part of option one, mark option one as active
                             this.$element.find("input[name='qcron-monthly-option']")[0].checked = true;
                             this.$element.find("input[name='qcron-monthly-option']")[1].checked = false;
-                        } else if ($target.parent().hasClass("qcron-monthly-option-two")) {
+                        } else if ($target.parent().hasClass("qcron-monthly-option-two")) { // if the select is part of option two, mark option two as active
                             this.$element.find("input[name='qcron-monthly-option']")[0].checked = false;
                             this.$element.find("input[name='qcron-monthly-option']")[1].checked = true;
                         }
@@ -1074,12 +1557,14 @@
                 });
             },
             _init: function () {
+                // build a jquery object representing the Monthly Option One: "On day 25"
                 var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
                 this.$monthlyOptionOneRadio = $("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>").appendTo($monthlyOptionOne);
                 $monthlyOptionOne.append("<span>On day</san>");
                 this.$mo1DomStartSelect = $("<select class='qcron-dom-select'></select>").appendTo($monthlyOptionOne);
                 
-                var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>");
+                // build a jquery object representing the Monthly Option Two: "The First Saturday"
+                var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>"); // monthly option two container
                 this.$monthlyOptionTwoRadio = $("<input type='radio' name='qcron-monthly-option' value='option-two'/>").appendTo($monthlyOptionTwo);
                 $monthlyOptionTwo.append("<span>The</span>");
                 this.$mo2WeekSelect = $("<select class='qcron-week-select'></select>").appendTo($monthlyOptionTwo);
@@ -1090,6 +1575,11 @@
                 this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
                 this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
 
+                // add 0 - 31 as possible day of month to start on
+                // add 1 - 11 as possible month increments
+                // add 1 - 12 as possible start months
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possible start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i > 0 && i < 32)
                         $(".qcron-dom-select", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
@@ -1105,17 +1595,20 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
                 
+                // for each week 1 - 4, add an option to possible weeks selection
                 $.each(__weeks, function (key, week) {
                     $(".qcron-week-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + week.display + "</option>"); 
                 });
+                // for each weekdays Sunday - Saturday, add an option to possible weekdays selection
                 $.each(__weekdays, function (key, weekday) {
                     $(".qcron-dow-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + weekday.display + "</option>");
                 });
                 
+                // empty and render
                 this.$element.empty();
                 this.$element.append($monthlyOptionOne);
                 this.$element.append($monthlyOptionTwo);
-                $("<label>every</label>")
+                $("<label>of every</label>")
                     .append(this.$monthIncrementSelect)
                     .append("month(s)")
                     .appendTo(this.$element);
@@ -1128,18 +1621,25 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
+                // establish the values that are applicable for both option one and option two
                 var selectedOption = this.$element.find("input[name='qcron-monthly-option']:checked").val(),
                     minuteStart = this.$minuteStartSelect.val(),
                     hourStart = this.$hourStartSelect.val(),
                     monthIncr, monthStart;
+                
                 if (selectedOption == "option-one") {
                     minuteStart = this.$minuteStartSelect.val();
                     hourStart   = this.$hourStartSelect.val();
                     monthIncr   = this.$monthIncrementSelect.val();
                     monthStart  = this.$monthStartSelect.val();
 
-                    var dom         = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
+                    var dom = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
 
                     return "0 " + minuteStart + " " + hourStart + " " + dom + " " + monthStart + "/" + monthIncr + " ? *";    
                 } else {
@@ -1154,6 +1654,14 @@
                     return "0 " + minuteStart + " " + hourStart + " ? " + monthStart + "/" + monthIncr + " " + dow + "#" + weekNum + " *";
                 }
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -1169,10 +1677,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} monthly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for monthly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -1180,6 +1709,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59.
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -1194,6 +1730,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -1208,6 +1751,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the day of month
+                     * - pattern A where A is 1 - 31 or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hours first");
@@ -1227,6 +1777,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the month
+                     * - pattern A/B where A is 1-12 and B is 1-11.
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set day of month first');
@@ -1242,6 +1799,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A#B where A is 1-7 and B is 1-4 or ? ( if day of month is ? then day of week cannot be ? )
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1265,6 +1829,14 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * 
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1274,6 +1846,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1287,10 +1865,19 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Yearly Tab
+         * 
+         * Defines a very strict definition for establish a 'yearly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  C  D  ?  *
+         *                                          0 A B  ?  C D#E *
+         */
         $.widget("jpgilchrist.qcronYearlyTab", {
             options: {},
             _create: function () {
@@ -1310,12 +1897,14 @@
                 });
             },
             _init: function () {
+                // build a jquery object representing the Yearly Option One: "Every June 26"
                 var $yearlyOptionOne = $("<div class='qcron-yearly-option-one'></div>");
                 this.$yearlyOptionOneRadio = $("<input type='radio' name='qcron-yearly-option' value='option-one' checked/>").appendTo($yearlyOptionOne);
                 $yearlyOptionOne.append("<span>Every</san>");
                 this.$yearlyOptionOneMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionOne);
                 this.$yearlyOptionOneDomSelect = $("<select class='qcron-dom-select'></select>").appendTo($yearlyOptionOne);
 
+                // build a jquery object representing the Yearly Option Two: "The First Saturday of May"
                 var $yearlyOptionTwo = $("<div class='qcron-yearly-option-two'></div>");
                 this.$yearlyOptionTwoRadio = $("<input type='radio' name='qcron-yearly-option' value='option-two'/>").appendTo($yearlyOptionTwo);
                 $yearlyOptionTwo.append("<span>The</span>");
@@ -1324,9 +1913,11 @@
                 $yearlyOptionTwo.append("<span>of</span>");
                 this.$yearlyOptionTwoMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionTwo);
 
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 0 - 59 as possible start minutes
+                // add 0 - 23 as possibel start hours
                 for (var i = 0; i < 60; i++) {
                     if (i < 24)
                         this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
@@ -1334,19 +1925,25 @@
                 }
 
                 var self = this;
+                
+                // for each month January - December add an option to both option one's and option two's month selection
                 $.each(__months, function (key, month) {
                     self.$yearlyOptionOneMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
                     self.$yearlyOptionTwoMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
                 });
                 
+                // for each weeks First - Fourth add an option to option two's week selection
                 $.each(__weeks, function (key, week) {
                     self.$yearlyOptionTwoWeekSelect.append("<option value='" + key + "'>" + week.display + "</option>"); 
                 });
                 
+                // for each weekdays Sunday - Saturday add an option to option two's weekday selection
                 $.each(__weekdays, function (key, weekday) {
                     self.$yearlyOptionTwoDowSelect.append("<option value='" + key + "'>" + weekday.display + "</option>");
                 });
                 
+                // when option one's month selection changes re-render the day of month options based
+                // on the max number of days in the selected month
                 this.$yearlyOptionOneMonthSelect.on('change', function () {
                     var month = __months[$(this).val()];
                     self.$yearlyOptionOneDomSelect.empty();
@@ -1354,19 +1951,25 @@
                         self.$yearlyOptionOneDomSelect.append("<option value='" + i + "'>" + i + "</option>");
                     }
                 });
-                this.$yearlyOptionOneMonthSelect.trigger('change');
+                this.$yearlyOptionOneMonthSelect.trigger('change'); // trigger the change on init
                 
-
+                // empty and render
                 this.$element.empty();
                 this.$element.append($yearlyOptionOne);
                 this.$element.append($yearlyOptionTwo);
-                $("<label>at</label>")
+                $("<label>starting at</label>")
                     .append(this.$hourStartSelect)
                     .append(":")
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
+                // establish the values that are applicable for both option one and option two
                 var selectedOption = this.$element.find("input[name='qcron-yearly-option']:checked").val(),
                     minuteStart = this.$minuteStartSelect.val(),
                     hourStart = this.$hourStartSelect.val(),
@@ -1391,6 +1994,14 @@
                     return "0 " + minuteStart + " " + hourStart + " ? " + month + " " + dow + "#" + weekNum + " *";
                 }
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -1406,10 +2017,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} yearly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for yearly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -1417,6 +2049,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -1431,6 +2070,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A wehre A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -1445,6 +2091,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is 1 - 31 or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hours first");
@@ -1464,6 +2117,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is 1 - 12
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set day of month first');
@@ -1482,6 +2142,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A where A#B or ? (if day of month is ? day of week cannot be ?)
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1505,6 +2172,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1514,6 +2188,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1527,10 +2207,17 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Custom Tab
+         * 
+         * This tab will take literally any input. It's provided to allow a method for overriding the ui and providing
+         * a custom cron expression. This tab is entirely meant to be working in conjunction with the validateUrl defined
+         * in the root qcron widget.
+         */
         $.widget("jpgilchrist.qcronCustomTab", {
             options: {
                 inputEnabled: true,
@@ -1550,9 +2237,21 @@
                 $("<div><a target='_blank' href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger'>Quartz Syntax Help</a></div>")
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {                
                 return !!this.$input.val() ? this.$input.val().trim() : null;
             },
+            
+            /**
+             * Gets or Sets the value of the input in the custom tab
+             * 
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {                
                 if (!value)
                     return this.build();
@@ -1561,6 +2260,11 @@
             }
         });
                     
+        /**
+         * Utility function to prepend a '0' if the number is currently only one digit long.
+         * @param   {number} num - a number
+         * @returns {string} the number conditionally prepended with a "0". 
+         */
         function twodigitformat (num) {
             return ("0" + num).slice(-2);
         }

@@ -1608,7 +1608,7 @@
                 this.$element.empty();
                 this.$element.append($monthlyOptionOne);
                 this.$element.append($monthlyOptionTwo);
-                $("<label>every</label>")
+                $("<label>of every</label>")
                     .append(this.$monthIncrementSelect)
                     .append("month(s)")
                     .appendTo(this.$element);
@@ -1957,7 +1957,7 @@
                 this.$element.empty();
                 this.$element.append($yearlyOptionOne);
                 this.$element.append($yearlyOptionTwo);
-                $("<label>at</label>")
+                $("<label>starting at</label>")
                     .append(this.$hourStartSelect)
                     .append(":")
                     .append(this.$minuteStartSelect)

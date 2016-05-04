@@ -542,13 +542,10 @@
         /*
          * Jquery Qcron Minutes Tab
          * 
-         * Defines a very restrictive definition of what running a cron expression every minute should look like
-         * so that it is easily renderable in a selection ui that provides no dynamic user input, other than selection
-         * dropdowns. 
-         * 
-         * The form of minutes as defined by quartz cron expressino language is '#/#' meaning an explicit minute to start at 
-         * and an increment. Therefore 1/3 means: start a minute 1 and run every 3 minutes thereafter. Thus the outcome would
-         * be 1,4,7,... 
+         * Defines a very strict definition for establish a 'minutes' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S  M   H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A/B  *  *  *  ?  *
          */
         $.widget("jpgilchrist.qcronMinutesTab", {
             options: {},
@@ -585,7 +582,6 @@
              * @returns {string} cron expression
              */
             build: function () {
-                // 0 1/3 * * * ? *
                 return "0 " + this.$minuteStartSelect.val() + "/" + this.$minuteSelect.val() + " * * * ? *";
             },
             
@@ -597,10 +593,10 @@
              * @returns {string} cron expression
              */
             value: function (value) {
-                if (!value) // if a value hasn't been passed, then just build an expression for the current state of the tab
+                if (!value)
                     return this.build();
-                var parts = value.split(/\s+/); // split on the white spaces
-                var builder = this._builder(); // get a builder object
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
                 builder.seconds(parts[0])
                     .minutes(parts[1])
                     .hours(parts[2])
@@ -609,7 +605,7 @@
                     .dayOfWeek(parts[5]);
                 if (!!parts[6])
                     builder.year(parts[6]);
-                return builder.build(); // return the built value (if valid)
+                return builder.build();
             },
 
             /**
@@ -632,7 +628,6 @@
                     /**
                      * set the seconds 
                      * - pattern A where A is 0
-                     * 
                      * @throws {Error} invalid seconds error
                      * @param   {string} seconds - the seconds expression
                      * @returns {Builder} the builder itself
@@ -648,7 +643,6 @@
                     /**
                      * set the minutes
                      * - pattern A/B where A is 0 - 59 and B is 1 - 59.
-                     * 
                      * @throws {Error} invalid minutes error
                      * @param   {string} minutes - the minutes expression
                      * @returns {Builder} the builder itself
@@ -662,6 +656,7 @@
                             throw new Error("minutes must be in the form {int}/{int}");
                         mi = minutes;
 
+                        // the minutes are valid, upate the ui
                         ui.$minuteStartSelect.val(match[1]);
                         ui.$minuteSelect.val(match[2]);
 
@@ -671,7 +666,6 @@
                     /**
                      * set the hours
                      * - pattern A where A is *
-                     * 
                      * @throws {Error} invalid hours error
                      * @param   {string} hours - the hours expression
                      * @returns {Builder} the builder itself
@@ -690,7 +684,6 @@
                     /**
                      * set the day of month
                      * - pattern A where A is * or ?
-                     * 
                      * @throws {Error} invalid day of month error
                      * @param   {string} dayOfMonth - the day of month expression
                      * @returns {Builder} the builder itself
@@ -708,7 +701,6 @@
                     /**
                      * set the month
                      * - pattern A where A is *
-                     * 
                      * @throws {Error} invalid month error
                      * @param   {string} month - the month expression
                      * @returns {Builder} the builder itself
@@ -726,7 +718,6 @@
                     /**
                      * set the day of week
                      * - pattern A where A is * or ? but not equivalent to day of month
-                     * 
                      * @throws {Error} invalid day of week error
                      * @param   {string} dayOfWeek - the day of week expression
                      * @returns {Builder} the builder itself
@@ -741,6 +732,500 @@
                             throw new Error("only day of week or day of month can be '?' not both.");
                         if (dom === "*" && dayOfWeek === "*")
                             throw new Error("either day of week or day of month must be '?'.");
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        var p = /^[*]$/;
+                        if (p.exec(year) === null)
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+                        return expression;
+                    };
+                }
+                
+                return new Builder(this); // the builder initialized with the context of the plugin
+            }
+        });
+        
+        /*
+         * Jquery Qcron Hourly Tab
+         * 
+         * Defines a very strict definition for establish a 'hourly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns.
+         *                                          S M  H  Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B/C  *  *  ?  *
+         */
+        $.widget("jpgilchrist.qcronHourlyTab", {
+            options: {},
+            _create: function () {
+                this.$element = $(this.element);
+            },
+            _init: function () {
+                this.$hourSelect = $("<select class='qcron-hour-select'></select>"); // the hour increment
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
+
+                // add 1 - 23 as possible hour increments
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possibel start minutes
+                for (var i = 0; i < 60; i++) {
+                    if (i > 0 && i < 24)
+                        this.$hourSelect.append("<option value='" + i + "'>" + i + "</option>");
+                    if (i < 24)
+                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                }
+
+                // empty and render
+                this.$element.empty();
+                $("<label>Every</label>")
+                    .append(this.$hourSelect)
+                    .append("hour(s)")
+                    .appendTo(this.$element);
+                $("<label>starting at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
+            },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
+            build: function () {
+                return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + "/" + this.$hourSelect.val() + " * * ? *";
+            },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
+            value: function (value) {
+                if (!value)
+                    return this.build();
+                
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .dayOfMonth(parts[3])
+                    .month(parts[4])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
+            },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} hourly tab builder
+             */
+            _builder: function () {
+                
+                /**
+                 * The builder for hourly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
+
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.seconds = function (seconds) {
+                        var p = /^0$/;
+                        if (seconds.match(p) === null)
+                            throw new Error("seconds must be '0'");
+                        s = seconds;
+                        return this;
+                    };
+
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be a number between 0 and 59.");
+                        mi = minutes;
+
+                        ui.$minuteStartSelect.val(match[1]);
+
+                        return this;
+                    };
+
+                    /**
+                     * set the hours
+                     * - pattern A/B where A is 0 - 23 and B is 1 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        var p = /^([0-9]|1[0-9]|2[0-3])\/([1-9]|1[0-9]|2[0-3])$/;
+                        var match = p.exec(hours);
+                        if (match === null)
+                            throw new Error("hours must be in the form {0-23}/{1-23}");
+                        h = hours;
+                        
+                        ui.$hourSelect.val(match[2]);
+                        ui.$hourStartSelect.val(match[1]);
+                        
+                        return this;
+                    };
+
+                    /**
+                     * set the day of month
+                     * - pattern A where A is * or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - day of month expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hour first");
+                        var p = /^[*?]$/;
+                        if (p.exec(dayOfMonth) === null)
+                            throw new Error("day of month must be '*' or '?'");
+                        dom = dayOfMonth;
+                        return this;
+                    };
+                    
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} invalid month error
+                     * @returns {Builder} the builder itself
+                     */
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        var p = /^[*]$/;
+                        if (p.exec(month) === null)
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    /**
+                     * set the day of week
+                     * - pattern A where A is * or ? ( but not equal to day of month )
+                     * @throws {Error} invalid day of week error
+                     * @param   {[[Type]]} dayOfWeek [[Description]]
+                     * @returns {[[Type]]} [[Description]]
+                     */
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        var p = /^[*?]$/;
+                        if (p.exec(dayOfWeek) === null)
+                            throw new Error("day of week must be '*' or '?'");
+                        if (dom === "?" && dayOfWeek === "?")
+                            throw new Error("only day of week or day of month can be '?' not both.");
+                        if (dom === "*" && dayOfWeek === "*")
+                            throw new Error("either day of week or day of month must be '?'.");
+                        dow = dayOfWeek;
+                        return this;
+                    };
+
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * 
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.year = function (year) {
+                        if (!dow)
+                            throw new Error("must set dow first");
+                        var p = /^[*]$/;
+                        if (p.exec(year) === null)
+                            throw new Error("year must be '*'");
+                        y = year;
+                        return this;
+                    };
+                    
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
+                    this.build = function () {
+                        var expression = "";
+                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
+                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
+                            if (!!y)
+                                expression += " " + y;
+                        } else {
+                            throw new Error("must specify all values before building");
+                        }
+
+                        return expression;
+                    };
+                }
+                return new Builder(this); // the builder initialized with the context of the plugin
+            }
+        });
+        
+        /*
+         * Jquery Qcron Daily Tab
+         * 
+         * Defines a very strict definition for establish a 'daily' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B C/D *  ?  *
+         */
+        $.widget("jpgilchrist.qcronDailyTab", {
+            options: {},
+            _create: function () {
+                this.$element = $(this.element);
+            },
+            _init: function () {
+                this.$daySelect = $("<select class='qcron-domincrement-select'></select>"); // the day increment
+                this.$dayStartSelect = $("<select class='qcron-domstart-select'></select>"); // the start day
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
+
+                // add 1 - 31 as possible day increments
+                // add 1 - 31 as possible start days
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possibel start minutes
+                for (var i = 0; i < 60; i++) {
+                    if (i > 0 && i < 32) {
+                        this.$daySelect.append("<option value='" + i + "'>" + i + "</option>");
+                        this.$dayStartSelect.append("<option value='" + i + "'>" + i + "</option>");
+                    }
+                    if (i < 24)
+                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
+                }
+
+                // empty and render
+                this.$element.empty();
+                $("<label>Every</label>")
+                    .append(this.$daySelect)
+                    .append("day(s)")
+                    .appendTo(this.$element);
+                $("<label>at</label>")
+                    .append(this.$hourStartSelect)
+                    .append(":")
+                    .append(this.$minuteStartSelect)
+                    .appendTo(this.$element);
+                $("<label>starting on day</label>")
+                    .append(this.$dayStartSelect)
+                    .appendTo(this.$element);
+            },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
+            build: function () {
+                return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() +  " " + this.$dayStartSelect.val() + "/" + this.$daySelect.val() + " * ? *";
+            },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
+            value: function (value) {
+                if (!value)
+                    return this.build();
+                var parts = value.split(/\s+/);
+                var builder = this._builder();
+                builder.seconds(parts[0])
+                    .minutes(parts[1])
+                    .hours(parts[2])
+                    .dayOfMonth(parts[3])
+                    .month(parts[4])
+                    .dayOfWeek(parts[5]);
+                if (!!parts[6])
+                    builder.year(parts[6]);
+                return builder.build();
+            },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} daily tab builder
+             */
+            _builder: function () {
+                
+                /**
+                 * The builder for daily tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
+                function Builder(context) {
+                    var s, mi, h, dom, mo, dow, y, ui = context;
+
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * 
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.seconds = function (seconds) {
+                        if (seconds !== "0")
+                            throw new Error("seconds must be 0");
+                        s = seconds;
+                        return this;
+                    };
+
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.minutes = function (minutes) {
+                        if (!s)
+                            throw new Error("must set seconds first");
+                        var p = /^([0-9]|[1-5][0-9])$/;
+                        var match = p.exec(minutes);
+                        if (match === null)
+                            throw new Error("minutes must be a number between 0 and 59.");
+                        mi = minutes;
+
+                        ui.$minuteStartSelect.val(match[1]);
+
+                        return this;
+                    };
+
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.hours = function (hours) {
+                        if (!mi)
+                            throw new Error("must set minutes first.");
+                        var p = /^([0-9]|1[0-9]|2[0-3])$/;
+                        var match = p.exec(hours);
+                        if (match === null)
+                            throw new Error("hours must be a number between 0 and 23");
+                        h = hours;
+
+                        ui.$hourStartSelect.val(match[1]);
+
+                        return this;
+                    };
+
+                    /**
+                     * set the day of month
+                     * - pattern A/B where A is 1-31 and B is 1-31.
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.dayOfMonth = function (dayOfMonth) {
+                        if (!h)
+                            throw new Error("must set hour first");
+                        var p = /^([1-9]|1[0-9]|2[0-9]|3[0-1])\/([1-9]|1[0-9]|2[0-9]|3[0-1])$/;
+                        var match = p.exec(dayOfMonth);
+                        if (match === null)
+                            throw new Error("day of month must be of the form {1-31}/{1-30}");
+                        dom = dayOfMonth;
+
+                        ui.$dayStartSelect.val(match[1]);
+                        ui.$daySelect.val(match[2]);
+
+                        return this;
+                    };
+                    
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.month = function (month) {
+                        if (!dom)
+                            throw new Error('must set dom first');
+                        var p = /^[*]$/;
+                        if (p.exec(month) === null)
+                            throw new Error("month must be '*'");
+                        mo = month;
+                        return this;
+                    };
+
+                    /**
+                     * set the day of week
+                     * - pattern A where A is ?
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
+                    this.dayOfWeek = function (dayOfWeek) {
+                        if (!mo)
+                            throw new Error("must set month first");
+                        var p = /^[?]$/;
+                        if (p.exec(dayOfWeek) === null)
+                            throw new Error("day of week must be '?'");
                         dow = dayOfWeek;
                         return this;
                     };
@@ -778,340 +1263,49 @@
                         } else {
                             throw new Error("must specify all values before building");
                         }
+
                         return expression;
                     };
                 }
-                
                 return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
-        $.widget("jpgilchrist.qcronHourlyTab", {
-            options: {},
-            _create: function () {
-                this.$element = $(this.element);
-            },
-            _init: function () {
-                this.$hourSelect = $("<select class='qcron-hour-select'></select>");
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
-
-                for (var i = 0; i < 60; i++) {
-                    if (i > 0 && i < 24)
-                        this.$hourSelect.append("<option value='" + i + "'>" + i + "</option>");
-                    if (i < 24)
-                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
-                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
-                }
-
-                this.$element.empty();
-                $("<label>Every</label>")
-                    .append(this.$hourSelect)
-                    .append("hour(s)")
-                    .appendTo(this.$element);
-                $("<label>starting at</label>")
-                    .append(this.$hourStartSelect)
-                    .append(":")
-                    .append(this.$minuteStartSelect)
-                    .appendTo(this.$element);
-            },
-            build: function () {
-                return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + "/" + this.$hourSelect.val() + " * * ? *";
-            },
-            value: function (value) {
-                if (!value)
-                    return this.build();
-                
-                var parts = value.split(/\s+/);
-                var builder = this._builder();
-                builder.seconds(parts[0])
-                    .minutes(parts[1])
-                    .hours(parts[2])
-                    .dayOfMonth(parts[3])
-                    .month(parts[4])
-                    .dayOfWeek(parts[5]);
-                if (!!parts[6])
-                    builder.year(parts[6]);
-                return builder.build();
-            },
-            _builder: function () {
-                function Builder(context) {
-                    var s, mi, h, dom, mo, dow, y, ui = context;
-
-                    this.seconds = function (seconds) {
-                        var p = /^0$/;
-                        if (seconds.match(p) === null)
-                            throw new Error("seconds must be '0'");
-                        s = seconds;
-                        return this;
-                    };
-
-                    this.minutes = function (minutes) {
-                        if (!s)
-                            throw new Error("must set seconds first");
-                        var p = /^([0-9]|[1-5][0-9])$/;
-                        var match = p.exec(minutes);
-                        if (match === null)
-                            throw new Error("minutes must be a number between 0 and 59.");
-                        mi = minutes;
-
-                        ui.$minuteStartSelect.val(match[1]);
-
-                        return this;
-                    };
-
-                    this.hours = function (hours) {
-                        if (!mi)
-                            throw new Error("must set minutes first.");
-                        var p = /^([0-9]|1[0-9]|2[0-3])\/([1-9]|1[0-9]|2[0-3])$/;
-                        var match = p.exec(hours);
-                        if (match === null)
-                            throw new Error("hours must be in the form {0-23}/{1-23}");
-                        h = hours;
-                        
-                        ui.$hourSelect.val(match[2]);
-                        ui.$hourStartSelect.val(match[1]);
-                        
-                        return this;
-                    };
-
-                    this.dayOfMonth = function (dayOfMonth) {
-                        if (!h)
-                            throw new Error("must set hour first");
-                        var p = /^[*?]$/;
-                        if (p.exec(dayOfMonth) === null)
-                            throw new Error("day of month must be '*' or '?'");
-                        dom = dayOfMonth;
-                        return this;
-                    };
-                    
-                    this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
-                        var p = /^[*]$/;
-                        if (p.exec(month) === null)
-                            throw new Error("month must be '*'");
-                        mo = month;
-                        return this;
-                    };
-
-                    this.dayOfWeek = function (dayOfWeek) {
-                        if (!mo)
-                            throw new Error("must set month first");
-                        var p = /^[*?]$/;
-                        if (p.exec(dayOfWeek) === null)
-                            throw new Error("day of week must be '*' or '?'");
-                        if (dom === "?" && dayOfWeek === "?")
-                            throw new Error("only day of week or day of month can be '?' not both.");
-                        if (dom === "*" && dayOfWeek === "*")
-                            throw new Error("either day of week or day of month must be '?'.");
-                        dow = dayOfWeek;
-                        return this;
-                    };
-
-                    this.year = function (year) {
-                        if (!dow)
-                            throw new Error("must set dow first");
-                        var p = /^[*]$/;
-                        if (p.exec(year) === null)
-                            throw new Error("year must be '*'");
-                        y = year;
-                        return this;
-                    };
-
-                    this.build = function () {
-                        var expression = "";
-                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
-                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
-                            if (!!y)
-                                expression += " " + y;
-                        } else {
-                            throw new Error("must specify all values before building");
-                        }
-
-                        return expression;
-                    };
-                }
-                return new Builder(this);
-            }
-        });
-        
-        $.widget("jpgilchrist.qcronDailyTab", {
-            options: {},
-            _create: function () {
-                this.$element = $(this.element);
-            },
-            _init: function () {
-                this.$daySelect = $("<select class='qcron-domincrement-select'></select>");
-                this.$dayStartSelect = $("<select class='qcron-domstart-select'></select>");
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
-
-                for (var i = 0; i < 60; i++) {
-                    if (i > 0 && i < 32) {
-                        this.$daySelect.append("<option value='" + i + "'>" + i + "</option>");
-                        this.$dayStartSelect.append("<option value='" + i + "'>" + i + "</option>");
-                    }
-                    if (i < 24)
-                        this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
-                    this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
-                }
-
-                this.$element.empty();
-                $("<label>Every</label>")
-                    .append(this.$daySelect)
-                    .append("day(s)")
-                    .appendTo(this.$element);
-                $("<label>at</label>")
-                    .append(this.$hourStartSelect)
-                    .append(":")
-                    .append(this.$minuteStartSelect)
-                    .appendTo(this.$element);
-                $("<label>starting on day</label>")
-                    .append(this.$dayStartSelect)
-                    .appendTo(this.$element);
-            },
-            build: function () {
-                return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() +  " " + this.$dayStartSelect.val() + "/" + this.$daySelect.val() + " * ? *";
-            },
-            value: function (value) {
-                if (!value)
-                    return this.build();
-                var parts = value.split(/\s+/);
-                var builder = this._builder();
-                builder.seconds(parts[0])
-                    .minutes(parts[1])
-                    .hours(parts[2])
-                    .dayOfMonth(parts[3])
-                    .month(parts[4])
-                    .dayOfWeek(parts[5]);
-                if (!!parts[6])
-                    builder.year(parts[6]);
-                return builder.build();
-            },
-            _builder: function () {
-                function Builder(context) {
-                    var s, mi, h, dom, mo, dow, y, ui = context;
-
-                    this.seconds = function (seconds) {
-                        if (seconds !== "0")
-                            throw new Error("seconds must be 0");
-                        s = seconds;
-                        return this;
-                    };
-
-                    this.minutes = function (minutes) {
-                        if (!s)
-                            throw new Error("must set seconds first");
-                        var p = /^([0-9]|[1-5][0-9])$/;
-                        var match = p.exec(minutes);
-                        if (match === null)
-                            throw new Error("minutes must be a number between 0 and 59.");
-                        mi = minutes;
-
-                        ui.$minuteStartSelect.val(match[1]);
-
-                        return this;
-                    };
-
-                    this.hours = function (hours) {
-                        if (!mi)
-                            throw new Error("must set minutes first.");
-                        var p = /^([0-9]|1[0-9]|2[0-3])$/;
-                        var match = p.exec(hours);
-                        if (match === null)
-                            throw new Error("hours must be a number between 0 and 23");
-                        h = hours;
-
-                        ui.$hourStartSelect.val(match[1]);
-
-                        return this;
-                    };
-
-                    this.dayOfMonth = function (dayOfMonth) {
-                        if (!h)
-                            throw new Error("must set hour first");
-                        var p = /^([1-9]|1[0-9]|2[0-9]|3[0-1])\/([1-9]|1[0-9]|2[0-9]|3[0-1])$/;
-                        var match = p.exec(dayOfMonth);
-                        if (match === null)
-                            throw new Error("day of month must be of the form {1-31}/{1-30}");
-                        dom = dayOfMonth;
-
-                        ui.$dayStartSelect.val(match[1]);
-                        ui.$daySelect.val(match[2]);
-
-                        return this;
-                    };
-                    
-                    this.month = function (month) {
-                        if (!dom)
-                            throw new Error('must set dom first');
-                        var p = /^[*]$/;
-                        if (p.exec(month) === null)
-                            throw new Error("month must be '*'");
-                        mo = month;
-                        return this;
-                    };
-
-                    this.dayOfWeek = function (dayOfWeek) {
-                        if (!mo)
-                            throw new Error("must set month first");
-                        var p = /^[?]$/;
-                        if (p.exec(dayOfWeek) === null)
-                            throw new Error("day of week must be '?'");
-                        dow = dayOfWeek;
-                        return this;
-                    };
-
-                    this.year = function (year) {
-                        if (!dow)
-                            throw new Error("must set dow first");
-                        var p = /^[*]$/;
-                        if (p.exec(year) === null)
-                            throw new Error("year must be '*'");
-                        y = year;
-                        return this;
-                    };
-
-                    this.build = function () {
-                        var expression = "";
-                        if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
-                            expression += s + " " + mi  + " " + h + " " + dom + " " + mo + " " + dow;
-                            if (!!y)
-                                expression += " " + y;
-                        } else {
-                            throw new Error("must specify all values before building");
-                        }
-
-                        return expression;
-                    };
-                }
-                return new Builder(this);
-            }
-        });
-        
+        /*
+         * Jquery Qcron Weekly Tab
+         * 
+         * Defines a very strict definition for establish a 'weekly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M   Dow  Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  ?  *  C,D,E *
+         */
         $.widget("jpgilchrist.qcronWeeklyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
             },
             _init: function () {
-                this.$dayOfWeekCheckboxes = $("<div class='qcron-dow-checkboxes'></div>");
+                this.$dayOfWeekCheckboxes = $("<div class='qcron-dow-checkboxes'></div>"); // day of week check boxes contaienr
                 
                 var self = this;
+                
+                // add a checkbox for each weekday Sunday through Monday to the container
                 $.each(__weekdays, function (key, weekday) {
                     self.$dayOfWeekCheckboxes.append("<label><input type='checkbox' class='qcron-dow-input' value='" + key + "'/>" + weekday.display + "</label>");
                 });
                 
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possible start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i < 24)
                         this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
 
+                // empty and render
                 this.$element.empty();
                 this.$element.append(this.$dayOfWeekCheckboxes);
                 $("<label>at</label>")
@@ -1120,14 +1314,28 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
                 var selectedDaysOfWeek = [];
+                // find all selected weekdays and add it to the array
                 this.$dayOfWeekCheckboxes.find("input.qcron-dow-input:checked").each(function(key, dow) {
                     selectedDaysOfWeek.push(__weekdays[$(dow).val()].value);
                 });
 
                 return "0 " + this.$minuteStartSelect.val() + " " + this.$hourStartSelect.val() + " ? * " + selectedDaysOfWeek.join(",") + " *";
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -1143,10 +1351,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} weekly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for weekly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -1154,6 +1383,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes expression
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -1168,6 +1404,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0-23.
+                     * @throws {Error} invalid hours expression
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -1182,6 +1425,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hour first");
@@ -1192,6 +1442,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is *
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set day of month first');
@@ -1202,6 +1459,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A,B,C,D where is a common seperated list of numbers that are values 1 - 7. 
+                     * @throws {Error} invalid day of week error
+                     * @param   {string}   dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1225,6 +1489,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1234,6 +1505,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1247,22 +1524,32 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Monthly Tab
+         * 
+         * Defines a very strict definition for establish a 'monthly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom  M   Dow  Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  C  D/E   ?   *
+         *                                          0 A B  ?  C/D   E#F *
+         */
         $.widget("jpgilchrist.qcronMonthlyTab", {
             options: {},
             _create: function () {
                 this.$element = $(this.element);
                 
                 this._on(this.element, {
+                    // listen for select (dropdown) changes
                     "change select": function (event) {
                         var $target = $(event.target);
-                        if ($target.parent().hasClass("qcron-monthly-option-one")) {
+                        if ($target.parent().hasClass("qcron-monthly-option-one")) { // if the select is part of option one, mark option one as active
                             this.$element.find("input[name='qcron-monthly-option']")[0].checked = true;
                             this.$element.find("input[name='qcron-monthly-option']")[1].checked = false;
-                        } else if ($target.parent().hasClass("qcron-monthly-option-two")) {
+                        } else if ($target.parent().hasClass("qcron-monthly-option-two")) { // if the select is part of option two, mark option two as active
                             this.$element.find("input[name='qcron-monthly-option']")[0].checked = false;
                             this.$element.find("input[name='qcron-monthly-option']")[1].checked = true;
                         }
@@ -1270,12 +1557,14 @@
                 });
             },
             _init: function () {
+                // build a jquery object representing the Monthly Option One: "On day 25"
                 var $monthlyOptionOne = $("<div class='qcron-monthly-option-one'></div>");
                 this.$monthlyOptionOneRadio = $("<input type='radio' name='qcron-monthly-option' value='option-one' checked/>").appendTo($monthlyOptionOne);
                 $monthlyOptionOne.append("<span>On day</san>");
                 this.$mo1DomStartSelect = $("<select class='qcron-dom-select'></select>").appendTo($monthlyOptionOne);
                 
-                var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>");
+                // build a jquery object representing the Monthly Option Two: "The First Saturday"
+                var $monthlyOptionTwo = $("<div class='qcron-monthly-option-two'></div>"); // monthly option two container
                 this.$monthlyOptionTwoRadio = $("<input type='radio' name='qcron-monthly-option' value='option-two'/>").appendTo($monthlyOptionTwo);
                 $monthlyOptionTwo.append("<span>The</span>");
                 this.$mo2WeekSelect = $("<select class='qcron-week-select'></select>").appendTo($monthlyOptionTwo);
@@ -1286,6 +1575,11 @@
                 this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
                 this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
 
+                // add 0 - 31 as possible day of month to start on
+                // add 1 - 11 as possible month increments
+                // add 1 - 12 as possible start months
+                // add 0 - 23 as possible start hours
+                // add 0 - 59 as possible start minutes
                 for (var i = 0; i < 60; i++) {
                     if (i > 0 && i < 32)
                         $(".qcron-dom-select", $monthlyOptionOne).append("<option value='" + i + "'>" + i + "</option>");
@@ -1301,13 +1595,16 @@
                     this.$minuteStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
                 }
                 
+                // for each week 1 - 4, add an option to possible weeks selection
                 $.each(__weeks, function (key, week) {
                     $(".qcron-week-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + week.display + "</option>"); 
                 });
+                // for each weekdays Sunday - Saturday, add an option to possible weekdays selection
                 $.each(__weekdays, function (key, weekday) {
                     $(".qcron-dow-select", $monthlyOptionTwo).append("<option value='" + key + "'>" + weekday.display + "</option>");
                 });
                 
+                // empty and render
                 this.$element.empty();
                 this.$element.append($monthlyOptionOne);
                 this.$element.append($monthlyOptionTwo);
@@ -1324,18 +1621,25 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
+                // establish the values that are applicable for both option one and option two
                 var selectedOption = this.$element.find("input[name='qcron-monthly-option']:checked").val(),
                     minuteStart = this.$minuteStartSelect.val(),
                     hourStart = this.$hourStartSelect.val(),
                     monthIncr, monthStart;
+                
                 if (selectedOption == "option-one") {
                     minuteStart = this.$minuteStartSelect.val();
                     hourStart   = this.$hourStartSelect.val();
                     monthIncr   = this.$monthIncrementSelect.val();
                     monthStart  = this.$monthStartSelect.val();
 
-                    var dom         = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
+                    var dom = this.$element.find(".qcron-monthly-option-one .qcron-dom-select").val();
 
                     return "0 " + minuteStart + " " + hourStart + " " + dom + " " + monthStart + "/" + monthIncr + " ? *";    
                 } else {
@@ -1350,6 +1654,14 @@
                     return "0 " + minuteStart + " " + hourStart + " ? " + monthStart + "/" + monthIncr + " " + dow + "#" + weekNum + " *";
                 }
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -1365,10 +1677,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} monthly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for monthly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -1376,6 +1709,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59.
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -1390,6 +1730,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A where A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -1404,6 +1751,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the day of month
+                     * - pattern A where A is 1 - 31 or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hours first");
@@ -1423,6 +1777,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the month
+                     * - pattern A/B where A is 1-12 and B is 1-11.
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!dom)
                             throw new Error('must set day of month first');
@@ -1438,6 +1799,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A#B where A is 1-7 and B is 1-4 or ? ( if day of month is ? then day of week cannot be ? )
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1461,6 +1829,14 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * 
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1470,6 +1846,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1483,10 +1865,19 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Yearly Tab
+         * 
+         * Defines a very strict definition for establish a 'yearly' cron expression so that it is easily 
+         * renderable in a selection ui that provides no dynamic user input, other than selection dropdowns. 
+         *                                          S M H Dom M Dow Y
+         * Accepted Cron Expression Pseudo Pattern: 0 A B  C  D  ?  *
+         *                                          0 A B  ?  C D#E *
+         */
         $.widget("jpgilchrist.qcronYearlyTab", {
             options: {},
             _create: function () {
@@ -1506,12 +1897,14 @@
                 });
             },
             _init: function () {
+                // build a jquery object representing the Yearly Option One: "Every June 26"
                 var $yearlyOptionOne = $("<div class='qcron-yearly-option-one'></div>");
                 this.$yearlyOptionOneRadio = $("<input type='radio' name='qcron-yearly-option' value='option-one' checked/>").appendTo($yearlyOptionOne);
                 $yearlyOptionOne.append("<span>Every</san>");
                 this.$yearlyOptionOneMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionOne);
                 this.$yearlyOptionOneDomSelect = $("<select class='qcron-dom-select'></select>").appendTo($yearlyOptionOne);
 
+                // build a jquery object representing the Yearly Option Two: "The First Saturday of May"
                 var $yearlyOptionTwo = $("<div class='qcron-yearly-option-two'></div>");
                 this.$yearlyOptionTwoRadio = $("<input type='radio' name='qcron-yearly-option' value='option-two'/>").appendTo($yearlyOptionTwo);
                 $yearlyOptionTwo.append("<span>The</span>");
@@ -1520,9 +1913,11 @@
                 $yearlyOptionTwo.append("<span>of</span>");
                 this.$yearlyOptionTwoMonthSelect = $("<select class='qcron-month-select'></select>").appendTo($yearlyOptionTwo);
 
-                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>");
-                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>");
+                this.$hourStartSelect = $("<select class='qcron-hourstart-select'></select>"); // the start hour
+                this.$minuteStartSelect = $("<select class='qcron-minutestart-select'></select>"); // the start minute
 
+                // add 0 - 59 as possible start minutes
+                // add 0 - 23 as possibel start hours
                 for (var i = 0; i < 60; i++) {
                     if (i < 24)
                         this.$hourStartSelect.append("<option value='" + i + "'>" + twodigitformat(i) + "</option>");
@@ -1530,19 +1925,25 @@
                 }
 
                 var self = this;
+                
+                // for each month January - December add an option to both option one's and option two's month selection
                 $.each(__months, function (key, month) {
                     self.$yearlyOptionOneMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
                     self.$yearlyOptionTwoMonthSelect.append("<option value='" + key + "'>" + month.display + "</option>");
                 });
                 
+                // for each weeks First - Fourth add an option to option two's week selection
                 $.each(__weeks, function (key, week) {
                     self.$yearlyOptionTwoWeekSelect.append("<option value='" + key + "'>" + week.display + "</option>"); 
                 });
                 
+                // for each weekdays Sunday - Saturday add an option to option two's weekday selection
                 $.each(__weekdays, function (key, weekday) {
                     self.$yearlyOptionTwoDowSelect.append("<option value='" + key + "'>" + weekday.display + "</option>");
                 });
                 
+                // when option one's month selection changes re-render the day of month options based
+                // on the max number of days in the selected month
                 this.$yearlyOptionOneMonthSelect.on('change', function () {
                     var month = __months[$(this).val()];
                     self.$yearlyOptionOneDomSelect.empty();
@@ -1550,9 +1951,9 @@
                         self.$yearlyOptionOneDomSelect.append("<option value='" + i + "'>" + i + "</option>");
                     }
                 });
-                this.$yearlyOptionOneMonthSelect.trigger('change');
+                this.$yearlyOptionOneMonthSelect.trigger('change'); // trigger the change on init
                 
-
+                // empty and render
                 this.$element.empty();
                 this.$element.append($yearlyOptionOne);
                 this.$element.append($yearlyOptionTwo);
@@ -1562,7 +1963,13 @@
                     .append(this.$minuteStartSelect)
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {
+                // establish the values that are applicable for both option one and option two
                 var selectedOption = this.$element.find("input[name='qcron-yearly-option']:checked").val(),
                     minuteStart = this.$minuteStartSelect.val(),
                     hourStart = this.$hourStartSelect.val(),
@@ -1587,6 +1994,14 @@
                     return "0 " + minuteStart + " " + hourStart + " ? " + month + " " + dow + "#" + weekNum + " *";
                 }
             },
+            
+            /**
+             * Gets or Sets the value for this tab by utilizing the defined Builder methods.
+             * 
+             * @throws Error error from {Builder}
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {
                 if (!value)
                     return this.build();
@@ -1602,10 +2017,31 @@
                     builder.year(parts[6]);
                 return builder.build();
             },
+            
+            /**
+             * Always returns a new instance of {Builder}
+             * @throws {Error} reason for failing, typically a pattern issue
+             * @returns {Builder} yearly tab builder
+             */
             _builder: function () {
+                
+                /**
+                 * The builder for yearly tab. Internally defines functions to set each part of the cron expression
+                 * in a convenient DSL.
+                 * @throws {Error} Reason for failing.
+                 * @param   {object} context - the context of the widget
+                 * @returns {string} cron expression
+                 */
                 function Builder(context) {
                     var s, mi, h, dom, mo, dow, y, ui = context;
 
+                    /**
+                     * set the seconds 
+                     * - pattern A where A is 0
+                     * @throws {Error} invalid seconds error
+                     * @param   {string} seconds - the seconds expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.seconds = function (seconds) {
                         if (seconds !== "0")
                             throw new Error("seconds must be 0");
@@ -1613,6 +2049,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the minutes
+                     * - pattern A where A is 0 - 59
+                     * @throws {Error} invalid minutes error
+                     * @param   {string} minutes - the minutes expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.minutes = function (minutes) {
                         if (!s)
                             throw new Error("must set seconds first");
@@ -1627,6 +2070,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the hours
+                     * - pattern A wehre A is 0 - 23
+                     * @throws {Error} invalid hours error
+                     * @param   {string} hours - the hours expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.hours = function (hours) {
                         if (!mi)
                             throw new Error("must set minutes first.");
@@ -1641,6 +2091,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of month
+                     * - pattern A where A is 1 - 31 or ?
+                     * @throws {Error} invalid day of month error
+                     * @param   {string} dayOfMonth - the day of month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfMonth = function (dayOfMonth) {
                         if (!h)
                             throw new Error("must set hours first");
@@ -1660,6 +2117,13 @@
                         return this;
                     };
                     
+                    /**
+                     * set the month
+                     * - pattern A where A is 1 - 12
+                     * @throws {Error} invalid month error
+                     * @param   {string} month - the month expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.month = function (month) {
                         if (!h)
                             throw new Error('must set day of month first');
@@ -1678,6 +2142,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the day of week
+                     * - pattern A where A#B or ? (if day of month is ? day of week cannot be ?)
+                     * @throws {Error} invalid day of week error
+                     * @param   {string} dayOfWeek - the day of week expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.dayOfWeek = function (dayOfWeek) {
                         if (!mo)
                             throw new Error("must set month first");
@@ -1701,6 +2172,13 @@
                         return this;
                     };
 
+                    /**
+                     * set the year
+                     * - pattern A where A is *
+                     * @throws {Error} invalid day of year error
+                     * @param   {string} year - the year expression
+                     * @returns {Builder} the builder itself
+                     */
                     this.year = function (year) {
                         if (!dow)
                             throw new Error("must set dow first");
@@ -1710,6 +2188,12 @@
                         return this;
                     };
 
+                    /**
+                     * build the full cron expression based on the configured builder and returns it. 
+                     * 
+                     * @throws {Error} invalid cron expression error
+                     * @returns {string} the cron expression
+                     */
                     this.build = function () {
                         var expression = "";
                         if (!!s && !!mi && !!h && !!dom && !!mo && !!dow) {
@@ -1723,10 +2207,17 @@
                         return expression;
                     };
                 }
-                return new Builder(this);
+                return new Builder(this); // the builder initialized with the context of the plugin
             }
         });
         
+        /*
+         * Jquery Qcron Custom Tab
+         * 
+         * This tab will take literally any input. It's provided to allow a method for overriding the ui and providing
+         * a custom cron expression. This tab is entirely meant to be working in conjunction with the validateUrl defined
+         * in the root qcron widget.
+         */
         $.widget("jpgilchrist.qcronCustomTab", {
             options: {
                 inputEnabled: true,
@@ -1746,9 +2237,21 @@
                 $("<div><a target='_blank' href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger'>Quartz Syntax Help</a></div>")
                     .appendTo(this.$element);
             },
+            
+            /**
+             * Returns an expression built off of the current state of the tab
+             * @returns {string} cron expression
+             */
             build: function () {                
                 return !!this.$input.val() ? this.$input.val().trim() : null;
             },
+            
+            /**
+             * Gets or Sets the value of the input in the custom tab
+             * 
+             * @param   {string}   value optional cron expression
+             * @returns {string} cron expression
+             */
             value: function (value) {                
                 if (!value)
                     return this.build();
@@ -1757,6 +2260,11 @@
             }
         });
                     
+        /**
+         * Utility function to prepend a '0' if the number is currently only one digit long.
+         * @param   {number} num - a number
+         * @returns {string} the number conditionally prepended with a "0". 
+         */
         function twodigitformat (num) {
             return ("0" + num).slice(-2);
         }

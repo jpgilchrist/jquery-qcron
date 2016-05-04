@@ -1,6 +1,6 @@
 {
   "name": "jquery-qcron",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "jquery plugin for creating cron expression for both standard and quartz schedulers",
   "main": "src/jquery-qcron.js",
   "scripts": {
